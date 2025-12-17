@@ -33,20 +33,16 @@ export const createCustomerAndAssignDVA = async (
     // Assign DVA and create customer in one go
     const dvaRes = await assignDedicatedAccount({ ...data });
     const dvaData = (dvaRes as any).data?.data || (dvaRes as any).data;
-    // Save DVA to DB for this user
+    // Create or update DVA for this user
     const dvaDoc = await DVA.findOneAndUpdate(
-      { customer_code: dvaData?.customer_code },
+      { customer_code: dvaData?.customer_code } as any,
       {
         user: userId,
         customer_code: dvaData?.customer_code,
         account_name: dvaData?.account_name,
         account_number: dvaData?.account_number,
-        bank: dvaData?.bank,
-        provider_slug: dvaData?.provider_slug,
+        bankname: dvaData?.bank?.name,
         currency: dvaData?.currency,
-        active: dvaData?.active,
-        assigned: dvaData?.assigned,
-        assignment: dvaData?.assignment,
         created_at: dvaData?.created_at,
         updated_at: dvaData?.updated_at,
       },

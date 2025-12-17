@@ -7,6 +7,7 @@ import codeRoutes from "./routes/codeRoutes";
 import transactionRoutes from "./routes/transactionRoutes";
 import webhookRoutes from "./routes/webhookRoutes";
 import dvaRoutes from "./routes/dvaRoutes";
+import chargeRoutes from "./routes/chargeRoutes";
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware";
 
@@ -32,6 +33,7 @@ app.use("/api/code", codeRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/webhook", webhookRoutes);
 app.use("/api/dva", dvaRoutes);
+app.use("/api/charge", chargeRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
