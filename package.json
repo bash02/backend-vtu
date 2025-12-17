@@ -12,7 +12,9 @@
     "@types/bun": "latest",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/lodash": "^4.17.21"
+    "@types/lodash": "^4.17.21",
+    "@types/nodemailer": "^7.0.4",
+    "@types/pug": "^2.0.10"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -25,6 +27,8 @@
     "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.3",
     "lodash": "^4.17.21",
-    "mongoose": "^9.0.1"
+    "mongoose": "^9.0.1",
+    "nodemailer": "^7.0.11",
+    "pug": "^3.0.3"
   }
 }

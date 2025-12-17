@@ -4,7 +4,9 @@ import type { Request, Response } from "express";
 import _ from "lodash";
 import { signToken } from "../utils/jwt";
 import { hashPassword } from "../utils/hash";
-import { User, validateUser } from "../models/user";
+import { User } from "../models/user";
+import { sendVerificationEmail } from "../mails/mails";
+import { generateVerificationCode, setVerificationCode } from "../config/code";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -41,10 +43,6 @@ export const getCurrentUser = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { error } = validateUser(req.body);
-    if (error)
-      return res.status(400).json({ success: false, error: error.message });
-
     let user = await User.findOne({ email: req.body.email });
     if (user)
       return res
@@ -54,6 +52,11 @@ export const createUser = async (req: Request, res: Response) => {
     user = new User(_.pick(req.body, ["name", "email", "password", "phone"]));
     user.password = await hashPassword(user.password);
     await user.save();
+
+    // Send verification code after user creation
+    const code = generateVerificationCode();
+    setVerificationCode(user.email, code);
+    await sendVerificationEmail(user.email, String(code));
 
     const token = signToken({
       id: user._id,
@@ -66,7 +69,7 @@ export const createUser = async (req: Request, res: Response) => {
       .json({
         success: true,
         user: _.pick(user, ["_id", "name", "email", "phone"]),
-        message: "User created successfully",
+        message: "User created successfully. Verification code sent.",
       });
   } catch (err) {
     res.status(400).json({
@@ -76,52 +79,60 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
+// PATCH: Partially update user fields. Supports id from either params or query.
 export const updateUser = async (req: Request, res: Response) => {
+  const id = req.params.id || req.query.id;
+  if (!id) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing user id parameter" });
+  }
   try {
-    const { error } = validateUser(req.body);
-    if (error) {
-      return res.status(400).json({ success: false, error: error.message });
-    }
-
-    let data = _.pick(req.body, ["name", "email", "password", "phone", "pin"]);
-
-    // Remove undefined or missing fields so only provided fields are updated
-    (Object.keys(data) as Array<keyof typeof data>).forEach((key) => {
-      if (data[key] === undefined) {
-        delete data[key];
+    // Only validate fields that are present (for PATCH, not all required)
+    const allowedFields = ["name", "email", "password", "phone", "pin"];
+    const data: Record<string, any> = {};
+    for (const field of allowedFields) {
+      if (field in req.body) {
+        data[field] = req.body[field];
       }
-    });
-
+    }
+    // If no updatable fields provided
+    if (Object.keys(data).length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, error: "No valid fields provided for update" });
+    }
     if (data.password) {
       data.password = await hashPassword(data.password);
     }
-
-    const user = await User.findByIdAndUpdate(req.params.id, data, {
+    const updatedUser = await User.findByIdAndUpdate(id, data, {
       new: true,
-      runValidators: true, // ensures Mongoose applies schema validation
+      runValidators: true,
     }).select("_id name email phone");
-
-    if (!user) {
+    if (!updatedUser) {
       return res.status(404).json({ success: false, error: "User not found" });
     }
-
     res.json({
       success: true,
-      user,
+      user: updatedUser,
       message: "User updated successfully",
     });
   } catch (err) {
-    res.status(400).json({
-      success: false,
-      error: err instanceof Error ? err.message : "Invalid data",
-    });
+    res.status(500).json({ success: false, error: "Server error" });
   }
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
+  // Support id from either params or query
+  const id = req.params.id || req.query.id;
+  if (!id) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing user id parameter" });
+  }
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user)
+    const deletedUser = await User.findByIdAndDelete(id);
+    if (!deletedUser)
       return res.status(404).json({ success: false, error: "User not found" });
     res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {

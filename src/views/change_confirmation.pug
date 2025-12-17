@@ -1,0 +1,18 @@
+doctype html
+html
+  head
+    title Confirmation
+  body
+    h2 Account Change Confirmation
+    p Hello,
+    p Your account information has been updated successfully.
+    if type === 'password'
+      p Your password was changed on #{date}.
+    else if type === 'pin'
+      p Your PIN was changed on #{date}.
+    else if type === 'email'
+      p Your email address was changed to #{newEmail} on #{date}.
+    else
+      p Your account was updated.
+    p If you did not perform this action, please contact support immediately.
+    p Thank you for using our service!

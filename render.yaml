@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: dv-paystack-api
+    runtime: bun
+    buildCommand: bun install
+    startCommand: bun run index.js
