@@ -21,10 +21,12 @@ export const paystackWebhook = async (req: Request, res: Response) => {
 
   // Handle event asynchronously
   const event = req.body;
+  console.log("Received Paystack webhook event:", event);
   switch (event.event) {
     case "charge.success": {
       // Create a transaction in DB after successful charge
       const tx = event.data;
+      console.log("Processing charge.success for transaction:", tx);
       try {
         await Transaction.create({
           user: tx.metadata?.userId, // You must ensure userId is in metadata when initiating payment
