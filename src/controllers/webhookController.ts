@@ -10,86 +10,86 @@ import { User } from "../models/user";
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
 
 export const paystackWebhook = async (req: Request, res: Response) => {
-  // Verify signature
-  const hash = crypto
-    .createHmac("sha512", PAYSTACK_SECRET)
-    .update(JSON.stringify(req.body))
-    .digest("hex");
-  if (hash !== req.headers["x-paystack-signature"]) {
-    return res.status(401).json({ success: false, error: "Invalid signature" });
-  }
+  try {
+    // Verify signature
+    const hash = crypto
+      .createHmac("sha512", PAYSTACK_SECRET)
+      .update(JSON.stringify(req.body))
+      .digest("hex");
 
-  // Respond immediately
-  res.status(200).send("OK");
-
-  // Handle event asynchronously
-  const event = req.body;
-  console.log("Received Paystack webhook event:", event);
-  switch (event.event) {
-    case "charge.success": {
-      const tx = event.data;
-
-      //  Get DVA account number
-      const accountNumber =
-        tx.authorization?.receiver_bank_account_number ||
-        tx.metadata?.receiver_account_number;
-
-      if (!accountNumber) {
-        console.error("Missing DVA account number");
-        break;
-      }
-
-      // Find DVA → user
-      const dva = await DVA.findOne({ account_number: accountNumber } as any);
-      if (!dva) {
-        console.error("DVA not found for:", accountNumber);
-        break;
-      }
-
-      const userId = dva.user;
-
-      // Prevent duplicate webhook
-      const exists = await Transaction.findOne({ reference: tx.reference });
-      if (exists) break;
-
-      //  Amount deposited (Paystack sends kobo)
-      const amount = tx.amount / 100;
-
-      // Get system charge (optional)
-      const systemCharge = await Charge.findOne({ type: "funding" });
-      const chargeAmount = systemCharge?.amount || 0;
-
-      // Create transaction
-      await Transaction.create({
-        user: userId,
-        reference: tx.reference,
-        type: "wallet",
-        provider: "paystack",
-        amount: amount,
-        fee: chargeAmount, // system charge (record only)
-        total: amount, // user gets FULL amount
-        status: "success",
-        response: tx,
-        createdAt: new Date(tx.paid_at),
-      });
-
-      // 7️⃣ Credit FULL amount to user balance
-      await User.findByIdAndUpdate(userId, {
-        $inc: { balance: amount },
-      });
-
-      console.log("User credited:", amount, "User:", userId);
-      break;
+    if (hash !== req.headers["x-paystack-signature"]) {
+      return res.status(401).send("Invalid signature");
     }
-    case "customeridentification.success":
-      break;
-    case "customeridentification.failed":
-      break;
-    case "dedicatedaccount.assign.success": {
-      const data = event.data;
-      console.log("Dedicated account assigned:", data);
-      try {
-        await import("../models/dva").then(async ({ DVA }) => {
+
+    // RESPOND IMMEDIATELY
+    res.status(200).send("OK");
+
+    // Continue async processing (NO RESPONSE HERE)
+    const event = req.body;
+    console.log("Received Paystack webhook event:", event);
+
+    switch (event.event) {
+      case "charge.success": {
+        try {
+          const tx = event.data;
+
+          const accountNumber =
+            tx.authorization?.receiver_bank_account_number ||
+            tx.metadata?.receiver_account_number;
+
+          if (!accountNumber) {
+            console.error("Missing DVA account number");
+            return;
+          }
+
+          const dva = await DVA.findOne({
+            account_number: accountNumber,
+          } as any);
+          if (!dva) {
+            console.error("DVA not found:", accountNumber);
+            return;
+          }
+
+          const userId = dva.user;
+
+          const exists = await Transaction.findOne({
+            reference: tx.reference,
+          });
+          if (exists) return;
+
+          const amount = tx.amount / 100;
+
+          const systemCharge = await Charge.findOne({ type: "funding" });
+          const chargeAmount = systemCharge?.amount || 0;
+
+          await Transaction.create({
+            user: userId,
+            reference: tx.reference,
+            type: "wallet",
+            provider: "paystack",
+            amount,
+            fee: chargeAmount,
+            total: amount,
+            status: "success",
+            response: tx,
+            createdAt: new Date(tx.paid_at),
+          });
+
+          await User.findByIdAndUpdate(userId, {
+            $inc: { balance: amount },
+          });
+
+          console.log("User credited:", amount, "User:", userId);
+        } catch (err) {
+          console.error("charge.success error:", err);
+        }
+        break;
+      }
+
+      case "dedicatedaccount.assign.success": {
+        try {
+          const data = event.data;
+
           await DVA.updateOne(
             { customer_code: data.customer.customer_code } as any,
             {
@@ -102,15 +102,22 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             },
             { upsert: true }
           );
-        });
-      } catch (e) {
-        // Optionally log error
+
+          console.log("Dedicated account saved");
+        } catch (err) {
+          console.error("DVA assign error:", err);
+        }
+        break;
       }
-      break;
+
+      default:
+        break;
     }
-    case "dedicatedaccount.assign.failed":
-      break;
-    default:
-      break;
+  } catch (err) {
+    // Only happens BEFORE response is sent
+    console.error("Webhook fatal error:", err);
+    if (!res.headersSent) {
+      res.status(500).send("Webhook error");
+    }
   }
 };

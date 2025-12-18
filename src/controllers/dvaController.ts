@@ -2,10 +2,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import type { Request, Response } from "express";
-import type { IDVA } from "../types/models";
 import type {
   AssignDedicatedAccountData,
-  DvaBankProvidersResponse,
   DvaBankProvider,
 } from "../services/paystackService";
 import {
