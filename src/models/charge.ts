@@ -1,16 +1,21 @@
 import mongoose from "mongoose";
 
-const chargeSchema = new mongoose.Schema(
-  {
-    amount: { type: Number },
-    type: {
-      type: String,
-      enum: ["funding", "debit"],
-      required: true,
-    },
+const chargeSchema = new mongoose.Schema({
+  amount: { type: Number },
+  type: {
+    type: String,
+    enum: ["funding", "debit"],
+    required: true,
   },
-  { timestamps: true }
-);
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
 const Charge = mongoose.model("Charge", chargeSchema);
 

@@ -7,8 +7,14 @@ const dvaSchema = new Schema({
   account_name: String,
   bankname: String,
   currency: String,
-  created_at: Date,
-  updated_at: Date,
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 export const DVA = mongoose.model("DVA", dvaSchema);

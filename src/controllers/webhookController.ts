@@ -77,7 +77,6 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             total: amount - chargeAmount,
             status: "success",
             response: tx,
-            createdAt: new Date(tx.paid_at),
           });
 
           await User.findByIdAndUpdate(userId, {
