@@ -42,15 +42,20 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             return;
           }
 
-          const dva = await DVA.findOne({
-            account_number: accountNumber,
-          } as any);
+          const dva = await DVA.findOne({ account_number: accountNumber });
+          console.log("DVA found:", dva);
           if (!dva) {
             console.error("DVA not found:", accountNumber);
             return;
           }
 
-          const userId = dva.user;
+          const userId = dva.userId;
+          console.log("User ID from DVA:", userId);
+
+          if (!userId) {
+            console.error("User ID missing on DVA document");
+            return;
+          }
 
           const exists = await Transaction.findOne({
             reference: tx.reference,
@@ -69,7 +74,7 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             provider: "paystack",
             amount,
             fee: chargeAmount,
-            total: amount,
+            total: amount - chargeAmount,
             status: "success",
             response: tx,
             createdAt: new Date(tx.paid_at),
@@ -90,20 +95,26 @@ export const paystackWebhook = async (req: Request, res: Response) => {
         try {
           const data = event.data;
 
-          await DVA.updateOne(
-            { customer_code: data.customer.customer_code } as any,
+          // Find user by email from the webhook data
+          const user = await User.findOne({ email: data.customer.email });
+          if (!user) {
+            console.error("User not found for email:", data.customer.email);
+            return;
+          }
+
+          // Update or insert DVA with user ID linked
+          await DVA.create(
             {
+              customer_code: data.customer.customer_code,
               account_number: data.dedicated_account.account_number,
               account_name: data.dedicated_account.account_name,
               bankname: data.dedicated_account.bank.name,
               currency: data.dedicated_account.currency,
-              created_at: data.dedicated_account.created_at,
-              updated_at: data.dedicated_account.updated_at,
-            },
-            { upsert: true }
+              userId: user._id,
+            }
           );
 
-          console.log("Dedicated account saved");
+          console.log("Dedicated account saved with linked user:", user._id);
         } catch (err) {
           console.error("DVA assign error:", err);
         }
