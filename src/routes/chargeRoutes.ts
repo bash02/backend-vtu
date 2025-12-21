@@ -5,7 +5,7 @@ import {
   getChargeById,
   updateCharge,
   deleteCharge,
-} from "../controllers/chargeController";
+} from "../controllers/charge.Controller";
 
 const router = Router();
 

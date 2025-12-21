@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   createCustomerAndAssignDVA,
   getDvaBankProviders,
-} from "../controllers/dvaController";
+} from "../controllers/dva.Controller";
 import { auth } from "../middleware/auth";
 
 const router = Router();

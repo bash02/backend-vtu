@@ -1,13 +1,15 @@
 import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import authRoute from "./routes/authRoute"; // matches filename exactly
+import authRoute from "./routes/auth"; // matches filename exactly
 import userRoutes from "./routes/userRoutes";
 import codeRoutes from "./routes/codeRoutes";
 import transactionRoutes from "./routes/transactionRoutes";
 import webhookRoutes from "./routes/webhookRoutes";
 import dvaRoutes from "./routes/dvaRoutes";
 import chargeRoutes from "./routes/chargeRoutes";
+import smePlugRoutes from "./routes/smePlugRoutes";
+import alrahuzRoutes from "./routes/alrahuz.routes";
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware";
 
@@ -34,6 +36,8 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/webhook", webhookRoutes);
 app.use("/api/dva", dvaRoutes);
 app.use("/api/charge", chargeRoutes);
+app.use("/api/smeplug", smePlugRoutes);
+app.use("/api/alrahuz", alrahuzRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

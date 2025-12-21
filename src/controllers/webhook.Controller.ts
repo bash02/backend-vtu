@@ -3,7 +3,7 @@ dotenv.config();
 import type { Request, Response } from "express";
 import crypto from "crypto";
 import { Transaction } from "../models/transaction";
-import { DVA } from "../models/dva";
+import { DVA } from "../models/dva.schema";
 import { Charge } from "../models/charge";
 import { User } from "../models/user";
 
@@ -80,7 +80,7 @@ export const paystackWebhook = async (req: Request, res: Response) => {
           });
 
           await User.findByIdAndUpdate(userId, {
-            $inc: { balance: amount },
+            $inc: { balance: amount - chargeAmount },
           });
 
           console.log("User credited:", amount, "User:", userId);
@@ -102,16 +102,14 @@ export const paystackWebhook = async (req: Request, res: Response) => {
           }
 
           // Update or insert DVA with user ID linked
-          await DVA.create(
-            {
-              customer_code: data.customer.customer_code,
-              account_number: data.dedicated_account.account_number,
-              account_name: data.dedicated_account.account_name,
-              bankname: data.dedicated_account.bank.name,
-              currency: data.dedicated_account.currency,
-              userId: user._id,
-            }
-          );
+          await DVA.create({
+            customer_code: data.customer.customer_code,
+            account_number: data.dedicated_account.account_number,
+            account_name: data.dedicated_account.account_name,
+            bankname: data.dedicated_account.bank.name,
+            currency: data.dedicated_account.currency,
+            userId: user._id,
+          });
 
           console.log("Dedicated account saved with linked user:", user._id);
         } catch (err) {

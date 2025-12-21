@@ -4,7 +4,7 @@ const chargeSchema = new mongoose.Schema({
   amount: { type: Number },
   type: {
     type: String,
-    enum: ["funding", "debit"],
+    enum: ["funding", "debit", "data", "airtime", "cable"],
     required: true,
   },
   createdAt: {
