@@ -1,6 +1,6 @@
 // utils/generatePlanKey.ts
 export interface PlanKeyParams {
-  provider?: string;
+  api?: string;
   network?: string;
   category?: string;
   size?: string;
@@ -9,19 +9,15 @@ export interface PlanKeyParams {
 }
 
 export function generatePlanKey(params: PlanKeyParams) {
-  const { provider, network, category, size, validity, name } = params;
+  const { api, network, category, size, validity, name } = params;
   if (name) {
-    const namePart = transformNameToColonFormat(name, provider, network);
-    return `${namePart}`;
+    const namePart = transformNameToColonFormat(name);
+    return `${api}:${network}:${namePart}`;
   }
-  return `${provider}:${network}:${category}:${size}:${validity}`;
+  return `${api}:${network}:${category}:${size}:${validity}`;
 }
 
-function transformNameToColonFormat(
-  name: string,
-  provider?: string,
-  network?: string
-) {
+function transformNameToColonFormat(name: string) {
   // Extract category inside brackets
   const categoryMatch = name.match(/\[(.*?)\]/);
   const category = categoryMatch ? categoryMatch[1] : null;
@@ -42,3 +38,16 @@ function transformNameToColonFormat(
 
   return colonJoined;
 }
+
+
+
+const networkMap: Record<number, string> = {
+  1: "MTN",
+  2: "Airtel",
+  3: "Glo",
+  4: "9Mobile",
+};
+
+export const getNetworkName = (id: number | string): string => {
+  return networkMap[Number(id)] || "Unknown";
+};

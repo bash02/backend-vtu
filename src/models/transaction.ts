@@ -5,13 +5,13 @@ const transactionSchema = new Schema<ITransaction>({
   user: {
     type: Schema.Types.ObjectId,
     ref: "User",
-    required: true,
+   required: false,
     index: true,
   },
 
   reference: {
     type: String,
-    required: true,
+   required: false,
     unique: true,
     index: true,
   },
@@ -19,17 +19,17 @@ const transactionSchema = new Schema<ITransaction>({
   type: {
     type: String,
     enum: ["airtime", "data", "electricity", "cable", "wallet"],
-    required: true,
+   required: false
   },
 
   provider: {
     type: String,
-    required: true,
+   required: false
   },
 
   amount: {
     type: Number,
-    required: true,
+   required: false,
     min: 0,
   },
 
@@ -41,7 +41,7 @@ const transactionSchema = new Schema<ITransaction>({
 
   total: {
     type: Number,
-    required: true,
+   required: false
   },
 
   status: {

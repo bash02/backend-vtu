@@ -3,7 +3,6 @@ import {
   getWalletBalance,
   getNetworks,
   purchaseDataPlan,
-  airtimePurchase,
   vtuTopup,
   getTransaction,
   fetchDevices,
@@ -22,9 +21,7 @@ router.get("/data-plans", auth, getDataPlans);
 
 // for admin
 router.post("/admin/edit-plan", auth, admin, upsertPlanPrice);
-
 router.post("/purchase-data-plan", auth, purchaseDataPlan);
-router.post("/airtime-purchase", auth, airtimePurchase);
 router.post("/vtu-topup", auth, vtuTopup);
 router.get("/transaction", auth, getTransaction);
 router.get("/transactions", auth, getTransactions);

@@ -9,7 +9,6 @@ const ProviderSchema = new mongoose.Schema({
     required: true,
   },
   is_active: { type: Boolean, default: true },
-  priority: { type: Number, default: 1 }, // fallback order
 });
 
 const Provider = mongoose.model("Provider", ProviderSchema);

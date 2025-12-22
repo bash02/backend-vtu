@@ -14,7 +14,6 @@ export interface IUser extends Document {
 export interface ITransaction extends Document {
   user: mongoose.Types.ObjectId;
   reference: string;
-
   type: "airtime" | "data" | "electricity" | "cable" | "wallet";
   provider: string; // MTN, Airtel, Glo, 9mobile, Ikeja-Electric, etc.
 

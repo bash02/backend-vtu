@@ -1,8 +1,17 @@
 import type { Request, Response } from "express";
 import { smePlugApi } from "../api/smeplug";
-import { Charge } from "../models/charge";
 import { generatePlanKey } from "../utils/generatePlanKey";
 import { PlanPrice } from "../models/planPrice";
+import { User } from "../models/user";
+import { Transaction } from "../models/transaction";
+
+export interface DataTransferResponse {
+  status: boolean;
+  data: {
+    reference: string;
+    msg: string;
+  };
+}
 
 export interface SmePlugPlan {
   id: string;
@@ -95,16 +104,16 @@ export const getDataPlans = async (req: Request, res: Response) => {
   const result = allPlans.map((plan) => {
     const network = networkMap[plan.networkId] || "UNKNOWN";
     const planKey = generatePlanKey({
-      provider: "smeplug",
+      api: "smeplug",
       network: network,
       name: plan.name,
     });
 
     const rule = ruleMap.get(planKey);
 
-    const provider =
-      rule && rule.provider
-        ? rule.provider
+    const api =
+      rule && rule.api
+        ? rule.api
         : Number(plan.telco_price) === 0
         ? "simhosting"
         : "smeplug";
@@ -119,7 +128,7 @@ export const getDataPlans = async (req: Request, res: Response) => {
     }
     return {
       ...plan,
-      provider,
+      api,
       plan_key: planKey,
       selling_price: rule?.selling_price ?? null,
       is_active: rule?.is_active ?? false,
@@ -133,20 +142,23 @@ export const getDataPlans = async (req: Request, res: Response) => {
 export const upsertPlanPrice = async (req: Request, res: Response) => {
   try {
     // Accept any fields from the body and use them to generate plan_key
-    const provider: string = req.body.provider;
+    const api: string = req.body.api;
     const selling_price: number = req.body.selling_price;
     const is_active: boolean | undefined = req.body.is_active;
     const plan_key: string = req.body.plan_key;
+    const provider: string = req.body.provider;
+    const plan: string = req.body.name;
 
-    if (!plan_key || !provider || !selling_price) {
+    if (!plan_key || !api || !selling_price || !provider || !plan) {
       return res.status(400).json({
         success: false,
-        error: "Missing required fields: plan_key, provider, selling_price",
+        error:
+          "Missing required fields: plan_key, api, selling_price, provider, plan",
       });
     }
 
     // Upsert logic
-    const existing = await PlanPrice.findOne({ plan_key, provider });
+    const existing = await PlanPrice.findOne({ plan_key, api, provider });
     if (existing) {
       existing.selling_price = selling_price;
       if (is_active !== undefined) existing.is_active = is_active;
@@ -156,6 +168,8 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     } else {
       const created = await PlanPrice.create({
         plan_key,
+        api,
+        plan,
         provider,
         selling_price,
         is_active: is_active !== undefined ? is_active : true,
@@ -173,39 +187,72 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
 
 export const purchaseDataPlan = async (req: Request, res: Response) => {
   try {
-    const { network_id, phone_number, plan_id } = req.body;
-    if (!network_id || !phone_number || !plan_id) {
+    const { network_id, phone_number, plan_id, plan_key } = req.body;
+
+    if (!network_id || !phone_number || !plan_id || !plan_key) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+
+    const userId = req.user?.id as string | undefined;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    const existing = await PlanPrice.findOne({ plan_key });
+
+    if (
+      !user ||
+      typeof user.balance !== "number" ||
+      typeof existing?.selling_price !== "number" ||
+      user.balance < existing.selling_price
+    ) {
+      return res.status(400).json({
+        error: "Insufficient balance, user not found, or plan price missing",
+      });
+    }
+
+    // Call external purchase API
     const response = await smePlugApi.purchaseDataPlan(
       network_id,
       phone_number,
       plan_id
     );
-    res.json(response.data);
-  } catch (error: any) {
-    res
-      .status(500)
-      .json({ error: error.message || "Failed to purchase data plan" });
-  }
-};
 
-export const airtimePurchase = async (req: Request, res: Response) => {
-  try {
-    const { network_id, phone_number, amount } = req.body;
-    if (!network_id || !phone_number || !amount) {
-      return res.status(400).json({ error: "Missing required fields" });
+    const responseData = response.data as DataTransferResponse;
+
+    // Debit user wallet immediately on success from API
+    if (responseData.status) {
+      user.balance -= existing.selling_price;
+      await user.save();
+    } else {
+      return res.status(400).json({
+        error: "Failed to purchase data plan from provider",
+        response: responseData,
+      });
     }
-    const response = await smePlugApi.airtimePurchase(
-      network_id,
-      phone_number,
-      amount
-    );
-    res.json(response.data);
+
+    // Create transaction with status 'success' since already debited
+
+    await Transaction.create({
+      user: user._id,
+      reference: responseData.data.reference,
+      type: "data",
+      provider: existing.provider || "",
+      amount: existing.selling_price,
+      fee: 0,
+      total: existing.selling_price,
+      status: "pending",
+      phone: phone_number,
+      response: responseData,
+    });
+
+    return res.json(responseData);
   } catch (error: any) {
-    res
-      .status(500)
-      .json({ error: error.message || "Failed to purchase airtime" });
+    return res.status(500).json({
+      error: error.message || "Failed to purchase data plan",
+    });
   }
 };
 

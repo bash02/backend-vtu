@@ -1,8 +1,7 @@
-import { request, type Request, type Response } from "express";
+import type { Request, Response } from "express";
 import { alrahuzApi } from "../api/alrahuzdata";
 import { PlanPrice } from "../models/planPrice";
 import { generatePlanKey } from "../utils/generatePlanKey";
-import { size } from "lodash";
 
 export interface UserInfo {
   id: number;
@@ -162,14 +161,14 @@ export async function processPlanTree(
 
     if (p.cable) {
       planKey = generatePlanKey({
-        provider: "alrahuz",
+        api: "alrahuz",
         network: p.cable,
         name: p.package,
       });
       console.log("Cable Plan Key:", planKey);
     } else {
       planKey = generatePlanKey({
-        provider: "alrahuz",
+        api: "alrahuz",
         network: network,
         category,
         size,
@@ -181,7 +180,7 @@ export async function processPlanTree(
 
     const basePlan = {
       ...p,
-      ...(isAdmin && { provider: rule?.provider || "alrahuz" }),
+      ...(isAdmin && { api: rule?.api || "alrahuz" }),
       selling_price: rule?.selling_price || null,
       is_active: rule?.is_active || false,
       planKey: planKey,
@@ -231,21 +230,21 @@ export const checkUserDetail = async (req: Request, res: Response) => {
 export const upsertPlanPrice = async (req: Request, res: Response) => {
   try {
     // Accept any fields from the body and use them to generate plan_key
-    const provider: string = req.body.provider;
+    const api: string = req.body.api;
     const selling_price: number = req.body.selling_price;
     const is_active: boolean | undefined = req.body.is_active;
     const plan_key: string = req.body.plan_key;
 
     // Validation: required fields
-    if (!plan_key || !provider || selling_price === undefined) {
+    if (!plan_key || !api || selling_price === undefined) {
       return res.status(400).json({
         success: false,
-        error: "Plan key, provider, and selling price are required",
+        error: "Plan key, api, and selling price are required",
       });
     }
 
     // Upsert logic
-    const existing = await PlanPrice.findOne({ plan_key, provider });
+    const existing = await PlanPrice.findOne({ plan_key, api });
     if (existing) {
       existing.selling_price = selling_price;
       if (is_active !== undefined) existing.is_active = is_active;
@@ -255,7 +254,7 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     } else {
       const created = await PlanPrice.create({
         plan_key,
-        provider,
+        api,
         selling_price,
         is_active: is_active !== undefined ? is_active : true,
         updated_at: new Date(),
@@ -369,8 +368,8 @@ export const validateMeter = async (req: Request, res: Response) => {
 // CABLE //
 export const buyCable = async (req: Request, res: Response) => {
   try {
-    const { provider, iuc, plan } = req.body;
-    if (!provider || !iuc || !plan) {
+    const { api, iuc, plan } = req.body;
+    if (!api || !iuc || !plan) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
