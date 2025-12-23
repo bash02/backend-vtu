@@ -85,6 +85,7 @@ export const getDataPlans = async (req: Request, res: Response) => {
   const vendorPlansData = (
     vendorPlansResponse.data as SmePlugDataPlansApiResponse
   ).data;
+
   const rules = await PlanPrice.find({});
   const ruleMap = new Map(rules.map((r) => [r.plan_key, r]));
 
@@ -147,7 +148,7 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     const is_active: boolean | undefined = req.body.is_active;
     const plan_key: string = req.body.plan_key;
     const provider: string = req.body.provider;
-    const plan: string = req.body.name;
+    const plan: string = req.body.plan;
 
     if (!plan_key || !api || !selling_price || !provider || !plan) {
       return res.status(400).json({
@@ -187,9 +188,9 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
 
 export const purchaseDataPlan = async (req: Request, res: Response) => {
   try {
-    const { network_id, phone_number, plan_id, plan_key } = req.body;
+    const { network_id, phone, plan_id, plan_key } = req.body;
 
-    if (!network_id || !phone_number || !plan_id || !plan_key) {
+    if (!network_id || !phone || !plan_id || !plan_key) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -216,7 +217,7 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
     // Call external purchase API
     const response = await smePlugApi.purchaseDataPlan(
       network_id,
-      phone_number,
+      phone,
       plan_id
     );
 
@@ -232,7 +233,7 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
         response: responseData,
       });
     }
-
+    existing;
     // Create transaction with status 'success' since already debited
 
     await Transaction.create({
@@ -244,7 +245,7 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
       fee: 0,
       total: existing.selling_price,
       status: "pending",
-      phone: phone_number,
+      phone: phone,
       response: responseData,
     });
 

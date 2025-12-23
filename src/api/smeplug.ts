@@ -20,15 +20,15 @@ export const smePlugApi = {
 
   purchaseDataPlan: (
     network_id: number,
-    phone_number: string,
+    phone: string,
     plan_id: number
-  ) => apiClient.post("/data/purchase", { network_id, phone_number, plan_id }),
+  ) => apiClient.post("/data/purchase", { network_id, phone, plan_id }),
 
-  airtimePurchase: (network_id: number, phone_number: string, amount: number) =>
-    apiClient.post("/airtime/purchase", { network_id, phone_number, amount }),
+  airtimePurchase: (network_id: number, phone: string, amount: number) =>
+    apiClient.post("/airtime/purchase", { network_id, phone, amount }),
 
-  vtuTopup: (network_id: number, phone_number: string, amount: number) =>
-    apiClient.post("/vtu", { network_id, phone_number, amount }),
+  vtuTopup: (network_id: number, phone: string, amount: number) =>
+    apiClient.post("/vtu", { network_id, phone, amount }),
 
   getTransaction: (reference: string) =>
     apiClient.get(`/transactions/${reference}`),
