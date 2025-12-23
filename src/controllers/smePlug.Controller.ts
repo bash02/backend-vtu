@@ -259,13 +259,13 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
 
 export const vtuTopup = async (req: Request, res: Response) => {
   try {
-    const { network_id, phone_number, amount } = req.body;
-    if (!network_id || !phone_number || !amount) {
+    const { network_id, phone, amount } = req.body;
+    if (!network_id || !phone || !amount) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     const response = await smePlugApi.vtuTopup(
       network_id,
-      phone_number,
+      phone,
       amount
     );
     res.json(response.data);
