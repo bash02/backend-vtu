@@ -17,7 +17,7 @@ export interface ITransaction extends Document {
   type: "airtime" | "data" | "electricity" | "cable" | "wallet";
   provider: string; // MTN, Airtel, Glo, 9mobile, Ikeja-Electric, etc.
 
-  amount: number;
+  amount: string;
   fee: number;
   total: number;
 

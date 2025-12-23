@@ -19,9 +19,14 @@ export const alrahuzApi = {
   buyData: (payload: {
     network: number;
     mobile_number: string;
-    plan: number;
-    Ported_number?: boolean;
-  }) => apiClient.post("/data", payload),
+    plan_id: number;
+  }) =>
+    apiClient.post("/data", {
+      network: payload.network,
+      mobile_number: payload.mobile_number,
+      plan: payload.plan_id,
+      Ported_number: true,
+    }),
 
   getAllDataTransactions: () => apiClient.get("/data"),
 

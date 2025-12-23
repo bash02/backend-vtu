@@ -241,7 +241,7 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
       reference: responseData.data.reference,
       type: "data",
       provider: existing.provider || "",
-      amount: existing.selling_price,
+      amount: existing.plan,
       fee: 0,
       total: existing.selling_price,
       status: "pending",

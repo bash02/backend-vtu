@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { alrahuzApi } from "../api/alrahuzdata";
 import { PlanPrice } from "../models/planPrice";
 import { generatePlanKey } from "../utils/generatePlanKey";
+import { User } from "../models/user";
+import { Transaction } from "../models/transaction";
 
 export interface UserInfo {
   id: number;
@@ -234,17 +236,21 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     const selling_price: number = req.body.selling_price;
     const is_active: boolean | undefined = req.body.is_active;
     const plan_key: string = req.body.plan_key;
+    const provider: string = req.body.provider;
+    const plan: string = req.body.plan;
+    const plan_type: string = req.body.plan_type;
+    const month_validate: string = req.body.month_validate
 
     // Validation: required fields
-    if (!plan_key || !api || selling_price === undefined) {
+    if (!plan_key || !api || !selling_price || !provider || !plan || !plan_type || !month_validate || !is_active) {
       return res.status(400).json({
         success: false,
-        error: "Plan key, api, and selling price are required",
+        error: "Plan key, api, selling price, provider, plan, plan type, month validate, and is active are required",
       });
     }
 
     // Upsert logic
-    const existing = await PlanPrice.findOne({ plan_key, api });
+    const existing = await PlanPrice.findOne({ plan_key });
     if (existing) {
       existing.selling_price = selling_price;
       if (is_active !== undefined) existing.is_active = is_active;
@@ -253,8 +259,10 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
       return res.json({ success: true, plan: existing, updated: true });
     } else {
       const created = await PlanPrice.create({
-        plan_key,
+       plan_key,
         api,
+        plan: `${plan} ${plan_type} ${month_validate}`,
+        provider,
         selling_price,
         is_active: is_active !== undefined ? is_active : true,
         updated_at: new Date(),
@@ -272,15 +280,73 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
 // DATA //
 export const buyData = async (req: Request, res: Response) => {
   try {
-    const { network, mobile_number, plan } = req.body;
-    if (!network || !mobile_number || !plan) {
+    const { network, mobile_number, plan_key, plan_id } = req.body;
+
+    if (!network || !mobile_number || !plan_key || !plan_id) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const response = await alrahuzApi.buyData(req.body);
-    res.json(response.data);
+    const userId = req.user?.id as string | undefined;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    const existing = await PlanPrice.findOne({ plan_key });
+
+    if (
+      !user ||
+      typeof user.balance !== "number" ||
+      typeof existing?.selling_price !== "number"
+    ) {
+      return res.status(400).json({
+        error: "User not found or plan price missing",
+      });
+    }
+
+    if (user.balance < existing.selling_price) {
+      return res.status(400).json({
+        error: "Insufficient balance",
+      });
+    }
+
+    // Call Alrahuz API
+    const response = await alrahuzApi.buyData({
+      network,
+      mobile_number,
+      plan_id,
+    });
+
+    const responseData = response.data as any;
+
+    // Debit wallet ONLY if provider succeeded
+    if (!responseData.status) {
+      return res.status(400).json({
+        error: "Failed to purchase data plan from provider",
+        response: responseData,
+      });
+    }
+
+    user.balance -= existing.selling_price;
+    await user.save();
+
+    await Transaction.create({
+      user: user._id,
+      reference: responseData.data?.reference || "",
+      type: "data",
+      provider: existing.provider,
+      amount: existing.plan,
+      fee: 0,
+      total: existing.selling_price,
+      status: "pending", // webhook will finalize
+      phone: mobile_number,
+      response: responseData,
+    });
+
+    return res.json(responseData);
   } catch (error: any) {
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message || "Failed to buy data",
     });
   }

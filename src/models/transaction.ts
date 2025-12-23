@@ -28,7 +28,7 @@ const transactionSchema = new Schema<ITransaction>({
   },
 
   amount: {
-    type: Number,
+    type: String,
    required: false,
     min: 0,
   },
