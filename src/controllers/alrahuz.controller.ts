@@ -239,13 +239,21 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     const provider: string = req.body.provider;
     const plan: string = req.body.plan;
     const plan_type: string = req.body.plan_type;
-    const month_validate: string = req.body.month_validate
+    const month_validate: string = req.body.month_validate;
 
     // Validation: required fields
-    if (!plan_key || !api || !selling_price || !provider || !plan || !plan_type || !month_validate || !is_active) {
+    if (
+      !plan_key ||
+      !api ||
+      !selling_price ||
+      !provider ||
+      !plan ||
+      !is_active
+    ) {
       return res.status(400).json({
         success: false,
-        error: "Plan key, api, selling price, provider, plan, plan type, month validate, and is active are required",
+        error:
+          "Plan key, api, selling price, provider, plan, and is active are required",
       });
     }
 
@@ -259,9 +267,12 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
       return res.json({ success: true, plan: existing, updated: true });
     } else {
       const created = await PlanPrice.create({
-       plan_key,
+        plan_key,
         api,
-        plan: `${plan} ${plan_type} ${month_validate}`,
+        plan:
+          month_validate && plan_type
+            ? `${plan} ${plan_type} ${month_validate}`
+            : `${plan}`,
         provider,
         selling_price,
         is_active: is_active !== undefined ? is_active : true,
