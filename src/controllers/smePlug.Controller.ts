@@ -102,26 +102,33 @@ export const getDataPlans = async (req: Request, res: Response) => {
     }))
   );
 
-  const result = allPlans.map((plan) => {
+  // Precompute planKey and network for each plan to avoid redundancy
+  const allPlansWithKeys = allPlans.map((plan) => {
     const network = networkMap[plan.networkId] || "UNKNOWN";
     const planKey = generatePlanKey({
       api: "smeplug",
-      network: network,
+      network,
       name: plan.name,
     });
+    return { ...plan, network, planKey };
+  });
 
-    const rule = ruleMap.get(planKey);
+  // For non-admins, filter to only plans with a matching planKey in the DB
+  const filteredPlans = isAdmin
+    ? allPlansWithKeys
+    : allPlansWithKeys.filter((plan) => ruleMap.has(plan.planKey));
 
+  const result = filteredPlans.map((plan) => {
+    const rule = ruleMap.get(plan.planKey);
     const api =
       rule && rule.api
         ? rule.api
         : Number(plan.telco_price) === 0
         ? "simhosting"
         : "smeplug";
-
-    // Always return the full plan info, and if a rule exists, include DB price and status
     if (!isAdmin) {
-      const { price, telco_price, dispense_method, ...rest } = plan;
+      const { price, telco_price, dispense_method, network, planKey, ...rest } =
+        plan;
       return {
         ...rest,
         selling_price: rule?.selling_price ?? null,
@@ -130,13 +137,13 @@ export const getDataPlans = async (req: Request, res: Response) => {
     return {
       ...plan,
       api,
-      plan_key: planKey,
+      plan_key: plan.planKey,
       selling_price: rule?.selling_price ?? null,
       is_active: rule?.is_active ?? false,
     };
   });
 
-  res.json({ status: true, data: result });
+  res.json({ success: true, data: result });
 };
 
 // Add: Create or update a plan price (POST or PATCH)

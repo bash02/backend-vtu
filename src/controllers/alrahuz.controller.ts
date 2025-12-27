@@ -153,47 +153,72 @@ export async function processPlanTree(
   // Flatten all plans into a single array
   const flatPlans = flattenPlans(plans);
 
-  return flatPlans.map((p) => {
-    const network = p.plan_network ?? "";
-    const category = p.plan_type ?? "";
-    const size = p.plan ?? p.name ?? "";
-    const validity = p.month_validate ?? "";
+  return flatPlans
+    .filter((p) => {
+      if (isAdmin) return true; // Admins see all plans
+      // For non-admins, only include plans with a matching rule
+      const network = p.plan_network ?? "";
+      const category = p.plan_type ?? "";
+      const size = p.plan ?? p.name ?? "";
+      const validity = p.month_validate ?? "";
+      let planKey;
+      if (p.cable) {
+        planKey = generatePlanKey({
+          api: "alrahuz",
+          network: p.cable,
+          name: p.package,
+        });
+      } else {
+        planKey = generatePlanKey({
+          api: "alrahuz",
+          network: network,
+          category,
+          size,
+          validity,
+        });
+      }
+      return ruleMap.has(planKey);
+    })
+    .map((p) => {
+      const network = p.plan_network ?? "";
+      const category = p.plan_type ?? "";
+      const size = p.plan ?? p.name ?? "";
+      const validity = p.month_validate ?? "";
 
-    let planKey;
+      let planKey;
 
-    if (p.cable) {
-      planKey = generatePlanKey({
-        api: "alrahuz",
-        network: p.cable,
-        name: p.package,
-      });
-      console.log("Cable Plan Key:", planKey);
-    } else {
-      planKey = generatePlanKey({
-        api: "alrahuz",
-        network: network,
-        category,
-        size,
-        validity,
-      });
-    }
+      if (p.cable) {
+        planKey = generatePlanKey({
+          api: "alrahuz",
+          network: p.cable,
+          name: p.package,
+        });
+      } else {
+        planKey = generatePlanKey({
+          api: "alrahuz",
+          network: network,
+          category,
+          size,
+          validity,
+        });
+      }
 
-    const rule = ruleMap.get(planKey);
+      const rule = ruleMap.get(planKey);
 
-    const basePlan = {
-      ...p,
-      ...(isAdmin && { api: rule?.api || "alrahuz" }),
-      selling_price: rule?.selling_price || null,
-      is_active: rule?.is_active || false,
-      planKey: planKey,
-    };
-    // Hide is_active and planKey for non-admins
-    if (!isAdmin) {
-      const { plan_amount, is_active, planKey, ...rest } = basePlan;
-      return rest;
-    }
-    return basePlan;
-  });
+      const basePlan = {
+        ...p,
+        ...(isAdmin && { api: rule?.api || "alrahuz" }),
+        selling_price: rule?.selling_price || null,
+        is_active: rule?.is_active || false,
+        planKey: planKey,
+      };
+      // Hide is_active and planKey for non-admins
+      if (!isAdmin) {
+        const { plan_amount, is_active, planKey, ...rest } = basePlan;
+        return rest;
+      }
+      return basePlan;
+    });
 }
 
 export const checkUserDetail = async (req: Request, res: Response) => {
@@ -214,6 +239,7 @@ export const checkUserDetail = async (req: Request, res: Response) => {
     const cableplans = await processPlanTree(cableplanObj, isAdmin);
 
     return res.status(200).json({
+      status: true,
       ...(isAdmin && { userDetail: userData.user }),
       topuppercentage: userData.topuppercentage,
       Exam: userData.Exam,
@@ -222,7 +248,7 @@ export const checkUserDetail = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     return res.status(500).json({
-      status: false,
+      success: false,
       error: error.message || "Failed to process recharge pricing",
     });
   }
