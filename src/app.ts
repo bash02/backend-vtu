@@ -12,6 +12,7 @@ import smePlugRoutes from "./routes/smePlugRoutes";
 import alrahuzRoutes from "./routes/alrahuz.routes";
 import smePlugWebhookRoutes from "./routes/smePlugWebhookRoutes";
 import providerRoutes from "./routes/provider.routes";
+import utilityRoutes from "./routes/utilityRoutes";
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware";
 
@@ -42,6 +43,7 @@ app.use("/api/smeplug", smePlugRoutes);
 app.use("/api/alrahuz", alrahuzRoutes);
 app.use("/api/webhook", smePlugWebhookRoutes);
 app.use("/api/admin/providers", providerRoutes); // Example admin route
+app.use("/api/utility", utilityRoutes); // Utility routes to be added here
 
 app.use(notFound);
 app.use(errorHandler);
