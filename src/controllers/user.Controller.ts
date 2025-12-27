@@ -32,12 +32,27 @@ export const getUserById = async (req: Request, res: Response) => {
 
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {
-    const user = await User.findById(req.params._id);
-    if (!user)
-      return res.status(404).json({ success: false, error: "User not found" });
-    res.json({ success: true, user, message: "User retrieved successfully" });
+    const user = await User.findById(req?.user?.id).select(
+      "name email pin phone balance"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      user,
+      message: "User retrieved successfully",
+    });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Server error" });
+    res.status(500).json({
+      success: false,
+      error: "Server error",
+    });
   }
 };
 
