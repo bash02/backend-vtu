@@ -7,11 +7,11 @@ const router = Router();
 router.post("/send-reset-code", codeController.sendResetCode);
 // Change password
 router.post("/change-password", codeController.changePassword);
+// Forget password
+router.post("/forget-password", codeController.forgetPassword);
 // Change pin
 router.post("/change-pin", codeController.changePin);
-// Change email
-router.post("/change-email", codeController.changeEmail);
-// Confirm email with code and activate user
-router.post("/confirm-email", codeController.confirmEmail);
+// Reset pin
+router.post("/reset-pin", codeController.resetPin);
 
 export default router;

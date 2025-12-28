@@ -64,8 +64,11 @@ export const createUser = async (req: Request, res: Response) => {
         .status(400)
         .json({ success: false, error: "User already registered." });
 
-    user = new User(_.pick(req.body, ["name", "email", "password", "phone"]));
+    user = new User(
+      _.pick(req.body, ["name", "email", "password", "phone", "pin"])
+    );
     user.password = await hashPassword(user.password);
+    user.pin = await hashPassword(user.pin);
     await user.save();
 
     // Send verification code after user creation
@@ -83,7 +86,7 @@ export const createUser = async (req: Request, res: Response) => {
       .header("x-auth-token", token)
       .json({
         success: true,
-        user: _.pick(user, ["_id", "name", "email", "phone"]),
+        user: _.pick(user, ["_id", "name", "email", "phone", "pin"]),
         message: "User created successfully. Verification code sent.",
       });
   } catch (err) {
