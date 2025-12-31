@@ -14,4 +14,7 @@ router.post("/change-pin", codeController.changePin);
 // Reset pin
 router.post("/reset-pin", codeController.resetPin);
 
+// Confirm account
+router.post("/confirm-account", codeController.confirmAccount); 
+
 export default router;

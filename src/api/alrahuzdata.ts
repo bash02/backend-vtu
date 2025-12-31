@@ -31,11 +31,20 @@ export const alrahuzApi = {
   getAllDataTransactions: () => apiClient.get("/data"),
 
   // AIRTIME //
-  buyAirtime: (payload: {
-    network: number;
-    mobile_number: string;
-    amount: number;
-  }) => apiClient.post("/topup", payload),
+  buyAirtime: (
+    network: number,
+    mobile_number: string,
+    amount: number,
+    Ported_number = true,
+    airtime_type = "VTU"
+  ) =>
+    apiClient.post("/topup", {
+      network,
+      amount,
+      mobile_number,
+      Ported_number,
+      airtime_type,
+    }),
 
   // EDUCATION PIN //
   buyEducationPin: (payload: {
@@ -44,19 +53,30 @@ export const alrahuzApi = {
   }) => apiClient.post("/epin", payload),
 
   // ELECTRICITY //
-  buyElectricity: (payload: {
-    disco: string;
-    meter_number: string;
-    meter_type: "prepaid" | "postpaid";
-    amount: number;
-  }) => apiClient.post("/billpayment", payload),
+  buyElectricity: (
+    disco_name: string,
+    amount: string,
+    meter_number: string,
+    MeterType: "prepaid" | "postpaid"
+  ) =>
+    apiClient.post("/billpayment", {
+      disco_name,
+      amount,
+      meter_number,
+      MeterType,
+    }),
 
-  validateMeter: (meter: string) =>
-    apiClient.get(`/validate-meter/?meter=${meter}`),
+  validateMeter: (meternumber: string, disconame: string, mtype: string) =>
+    apiClient.get(
+      `/validatemeter/?meternumber=${meternumber}&disconame=${disconame}&mtype=${mtype}`
+    ),
 
   // CABLE //
-  buyCable: (payload: { provider: string; iuc: string; plan: string }) =>
-    apiClient.post("/cablesub", payload),
+  buyCable: (cablename: string, cableplan: string, smart_card_number: string) =>
+    apiClient.post("/cablesub", { cablename, cableplan, smart_card_number }),
 
-  validateIUC: (iuc: string) => apiClient.get(`/validate-iuc/?iuc=${iuc}`),
+  validateIUC: (smart_card_number: string, cablename: string) =>
+    apiClient.get(
+      `/validateiuc?smart_card_number=${smart_card_number}&cablename=${cablename}`
+    ),
 };

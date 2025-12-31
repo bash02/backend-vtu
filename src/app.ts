@@ -6,13 +6,14 @@ import userRoutes from "./routes/userRoutes";
 import codeRoutes from "./routes/codeRoutes";
 import transactionRoutes from "./routes/transactionRoutes";
 import webhookRoutes from "./routes/webhookRoutes";
-import dvaRoutes from "./routes/dvaRoutes";
 import chargeRoutes from "./routes/chargeRoutes";
 import smePlugRoutes from "./routes/smePlugRoutes";
 import alrahuzRoutes from "./routes/alrahuz.routes";
 import smePlugWebhookRoutes from "./routes/smePlugWebhookRoutes";
 import providerRoutes from "./routes/provider.routes";
 import utilityRoutes from "./routes/utilityRoutes";
+import examRoutes from "./routes/examRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware";
 
@@ -37,13 +38,14 @@ app.use("/api/users", userRoutes);
 app.use("/api/code", codeRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/webhook", webhookRoutes);
-app.use("/api/dva", dvaRoutes);
-app.use("/api/charge", chargeRoutes);
+app.use("/api/charges", chargeRoutes);
 app.use("/api/smeplug", smePlugRoutes);
 app.use("/api/alrahuz", alrahuzRoutes);
 app.use("/api/webhook", smePlugWebhookRoutes);
 app.use("/api/admin/providers", providerRoutes); // Example admin route
 app.use("/api/utility", utilityRoutes); // Utility routes to be added here
+app.use("/api/exams", examRoutes);
+app.use("/api/notification", notificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

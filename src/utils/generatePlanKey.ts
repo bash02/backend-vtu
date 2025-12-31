@@ -51,3 +51,14 @@ const networkMap: Record<number, string> = {
 export const getNetworkName = (id: number | string): string => {
   return networkMap[Number(id)] || "Unknown";
 };
+
+
+const cableMap: Record<number, string> = {
+  1: "DSTV",
+  2: "GOTV",
+  3: "STARTIMES",
+};
+
+export const getCableName = (id: number | string): string => {
+  return cableMap[Number(id)] || "Unknown";
+};

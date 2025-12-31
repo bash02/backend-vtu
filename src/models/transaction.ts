@@ -51,7 +51,7 @@ const transactionSchema = new Schema<ITransaction>({
     index: true,
   },
 
-  phone: String,
+  number: String,
   meterNumber: String,
   smartCardNumber: String,
 

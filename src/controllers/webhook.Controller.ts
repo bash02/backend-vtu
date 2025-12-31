@@ -3,9 +3,10 @@ dotenv.config();
 import type { Request, Response } from "express";
 import crypto from "crypto";
 import { Transaction } from "../models/transaction";
-import { DVA } from "../models/dva.schema";
 import { Charge } from "../models/charge";
 import { User } from "../models/user";
+import { ExpoToken } from "../models/expoToken";
+import { sendExpoNotification } from "../utils";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
 
@@ -42,20 +43,19 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             return;
           }
 
-          const dva = await DVA.findOne({ account_number: accountNumber });
-          console.log("DVA found:", dva);
-          if (!dva) {
-            console.error("DVA not found:", accountNumber);
+          // Find user by dva.account_number
+          const user = await User.findOne({
+            "dva.account_number": accountNumber,
+          });
+          console.log("User found by dva.account_number:", user);
+          if (!user) {
+            console.error(
+              "User not found for DVA account number:",
+              accountNumber
+            );
             return;
           }
-
-          const userId = dva.userId;
-          console.log("User ID from DVA:", userId);
-
-          if (!userId) {
-            console.error("User ID missing on DVA document");
-            return;
-          }
+          const userId = user._id;
 
           const exists = await Transaction.findOne({
             reference: tx.reference,
@@ -72,9 +72,10 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             reference: tx.reference,
             type: "wallet",
             provider: "paystack",
-            amount,
+            amount: `${amount}`,
             fee: chargeAmount,
             total: amount - chargeAmount,
+            number: accountNumber || "",
             status: "success",
             response: tx,
           });
@@ -84,6 +85,16 @@ export const paystackWebhook = async (req: Request, res: Response) => {
           });
 
           console.log("User credited:", amount, "User:", userId);
+
+          // Send push notification if Expo token exists
+          const tokenDoc = await ExpoToken.findOne({ userId });
+          if (tokenDoc) {
+            const title = "Wallet Funded";
+            const body = `Your wallet has been credited with ₦${
+              amount - chargeAmount
+            }. Reference: ${tx.reference}`;
+            await sendExpoNotification(tokenDoc.expoPushToken, title, body);
+          }
         } catch (err) {
           console.error("charge.success error:", err);
         }
@@ -101,17 +112,25 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             return;
           }
 
-          // Update or insert DVA with user ID linked
-          await DVA.create({
+          // Update user.dva subdocument with DVA info
+          user.dva = {
             customer_code: data.customer.customer_code,
             account_number: data.dedicated_account.account_number,
             account_name: data.dedicated_account.account_name,
             bankname: data.dedicated_account.bank.name,
             currency: data.dedicated_account.currency,
-            userId: user._id,
-          });
+          };
+          await user.save();
 
-          console.log("Dedicated account saved with linked user:", user._id);
+          console.log("Dedicated account saved in user.dva for:", user._id);
+
+          // Send push notification if Expo token exists
+          const tokenDoc = await ExpoToken.findOne({ userId: user._id });
+          if (tokenDoc) {
+            const title = "Dedicated Account Assigned";
+            const body = `A dedicated bank account has been assigned to you: ${data.dedicated_account.account_number} (${data.dedicated_account.bank.name})`;
+            await sendExpoNotification(tokenDoc.expoPushToken, title, body);
+          }
         } catch (err) {
           console.error("DVA assign error:", err);
         }

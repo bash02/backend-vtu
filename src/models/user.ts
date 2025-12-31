@@ -46,6 +46,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  dva: {
+    customer_code: { type: mongoose.Schema.Types.String, default: null },
+    account_number: { type: mongoose.Schema.Types.String, default: null },
+    account_name: { type: mongoose.Schema.Types.String, default: null },
+    bankname: { type: mongoose.Schema.Types.String, default: null },
+    currency: { type: mongoose.Schema.Types.String, default: null },
+  },
 });
 
 const User = mongoose.model("User", userSchema);

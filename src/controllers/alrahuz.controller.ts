@@ -1,9 +1,15 @@
 import type { Request, Response } from "express";
 import { alrahuzApi } from "../api/alrahuzdata";
 import { PlanPrice } from "../models/planPrice";
-import { generatePlanKey } from "../utils/generatePlanKey";
+import {
+  generatePlanKey,
+  getNetworkName,
+  getCableName,
+} from "../utils/generatePlanKey";
 import { User } from "../models/user";
 import { Transaction } from "../models/transaction";
+import { Charge } from "../models/charge";
+import { Exam as ExamModel } from "../models/exam";
 
 export interface UserInfo {
   id: number;
@@ -153,7 +159,17 @@ export async function processPlanTree(
   // Flatten all plans into a single array
   const flatPlans = flattenPlans(plans);
 
-  return flatPlans
+  // Remove duplicates by dataplan_id for data plans or cableplan_id for cable plans
+  const uniquePlans = flatPlans.filter((plan, index, self) => {
+    const idKey = plan.dataplan_id || plan.cableplan_id || plan.id;
+    return (
+      self.findIndex(
+        (p) => (p.dataplan_id || p.cableplan_id || p.id) === idKey
+      ) === index
+    );
+  });
+
+  return uniquePlans
     .filter((p) => {
       if (isAdmin) return true; // Admins see all plans
       // For non-admins, only include plans with a matching rule
@@ -171,7 +187,7 @@ export async function processPlanTree(
       } else {
         planKey = generatePlanKey({
           api: "alrahuz",
-          network: network,
+          network,
           category,
           size,
           validity,
@@ -196,7 +212,7 @@ export async function processPlanTree(
       } else {
         planKey = generatePlanKey({
           api: "alrahuz",
-          network: network,
+          network,
           category,
           size,
           validity,
@@ -214,7 +230,7 @@ export async function processPlanTree(
       };
       // Hide is_active and planKey for non-admins
       if (!isAdmin) {
-        const { plan_amount, is_active, planKey, ...rest } = basePlan;
+        const { plan_amount, is_active, ...rest } = basePlan;
         return rest;
       }
       return basePlan;
@@ -230,6 +246,7 @@ export const checkUserDetail = async (req: Request, res: Response) => {
 
     // Flattened Data plans
     const dataplans = await processPlanTree(userData?.Dataplans || {}, isAdmin);
+    console.log("Processed Data Plans:", dataplans);
 
     // Remove 'cablename' from Cableplan before processing
     const cableplanObj = { ...(userData?.Cableplan || {}) };
@@ -377,7 +394,7 @@ export const buyData = async (req: Request, res: Response) => {
       fee: 0,
       total: existing.selling_price,
       status: "pending", // webhook will finalize
-      phone: mobile_number,
+      number: mobile_number,
       response: responseData,
     });
 
@@ -403,15 +420,68 @@ export const getAllDataTransactions = async (_req: Request, res: Response) => {
 // AIRTIME //
 export const buyAirtime = async (req: Request, res: Response) => {
   try {
-    const { network, mobile_number, amount } = req.body;
+    const { network, amount, mobile_number } = req.body;
     if (!network || !mobile_number || !amount) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const response = await alrahuzApi.buyAirtime(req.body);
-    res.json(response.data);
+    const userId = req.user?.id as string;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user || typeof user.balance !== "number") {
+      return res
+        .status(400)
+        .json({ error: "User not found or invalid balance" });
+    }
+
+    // Get discount/charge percentage for airtime
+    const airtimeDiscountPercentage =
+      (await Charge.findOne({ type: "airtime" }))?.amount || 0;
+    const discount = (airtimeDiscountPercentage / 100) * amount;
+    const debitAmount = amount - discount;
+
+    if (user.balance < debitAmount) {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
+
+    // Call provider API
+    const response = await alrahuzApi.buyAirtime(
+      network,
+      amount,
+      mobile_number
+    );
+    const responseData = response.data as any;
+
+    // Only debit wallet if provider succeeded
+    if (!responseData.status) {
+      return res.status(400).json({
+        error: "Failed to purchase airtime from provider",
+        response: responseData,
+      });
+    }
+
+    user.balance -= debitAmount;
+    await user.save();
+
+    await Transaction.create({
+      user: user._id,
+      reference: responseData.data?.reference || "",
+      type: "airtime",
+      provider: getNetworkName(network),
+      amount: `${amount}`,
+      fee: airtimeDiscountPercentage,
+      total: debitAmount,
+      status: "pending", // webhook will finalize
+      number: mobile_number,
+      response: responseData,
+    });
+
+    return res.json(responseData);
   } catch (error: any) {
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message || "Failed to buy airtime",
     });
   }
@@ -425,11 +495,77 @@ export const buyEducationPin = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user || typeof user.balance !== "number") {
+      return res
+        .status(400)
+        .json({ error: "User not found or invalid balance" });
+    }
+
+    // Get exam price (from Exam config or request, fallback to 0)
+    let examAmount = 0;
+    if (req.body.amount) {
+      examAmount = Number(req.body.amount);
+    } else if (req.body.exam_amount) {
+      examAmount = Number(req.body.exam_amount);
+    } else if (req.body.price) {
+      examAmount = Number(req.body.price);
+    } else {
+      // Try to get from Exam model if available
+      const examDoc = await ExamModel.findOne({
+        name: exam_name,
+        is_active: true,
+      });
+      if (examDoc && examDoc.amount) {
+        examAmount = Number(examDoc.amount);
+      }
+    }
+    if (!examAmount || isNaN(examAmount)) {
+      return res
+        .status(400)
+        .json({ error: "Exam amount not found or invalid" });
+    }
+    const totalAmount = examAmount * Number(quantity);
+    if (user.balance < totalAmount) {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
+
+    // Call provider API
     const response = await alrahuzApi.buyEducationPin(req.body);
-    console.log(response.data);
-    res.json(response.data);
+    const responseData = response.data as any;
+
+    // Only debit wallet if provider succeeded
+    if (!responseData.status) {
+      return res.status(400).json({
+        error: "Failed to purchase education pin from provider",
+        response: responseData,
+      });
+    }
+
+    user.balance -= totalAmount;
+    await user.save();
+
+    await Transaction.create({
+      user: user._id,
+      reference: responseData.data?.reference || "",
+      type: "education_pin",
+      provider: "alrahuz",
+      amount: `${quantity}`,
+      fee: 0,
+      total: totalAmount,
+      status: "pending", // webhook will finalize
+      number: user.phone,
+      response: responseData,
+    });
+
+    return res.json(responseData);
   } catch (error: any) {
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message || "Failed to buy education pin",
     });
   }
@@ -438,15 +574,66 @@ export const buyEducationPin = async (req: Request, res: Response) => {
 // ELECTRICITY //
 export const buyElectricity = async (req: Request, res: Response) => {
   try {
-    const { disco, meter_number, meter_type, amount } = req.body;
-    if (!disco || !meter_number || !meter_type || !amount) {
+    const { disco_name, meter_number, MeterType, amount } = req.body;
+    if (!disco_name || !meter_number || !MeterType || !amount) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const response = await alrahuzApi.buyElectricity(req.body);
-    res.json(response.data);
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user || typeof user.balance !== "number") {
+      return res
+        .status(400)
+        .json({ error: "User not found or invalid balance" });
+    }
+
+    if (user.balance < amount) {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
+
+    // Call provider API
+    const response = await alrahuzApi.buyElectricity(
+      disco_name,
+      amount,
+      meter_number,
+      MeterType
+    );
+    const responseData = response.data as any;
+
+    // Only debit wallet if provider succeeded
+    if (!responseData.status) {
+      return res.status(400).json({
+        error: "Failed to purchase electricity from provider",
+        response: responseData,
+      });
+    }
+
+    const charge = await Charge.findOne({ type: "electricity" });
+    const chargeAmount = charge?.amount || 0;
+
+    user.balance -= amount + chargeAmount;
+    await user.save();
+
+    await Transaction.create({
+      user: user._id,
+      reference: responseData.data?.reference || "",
+      type: "electricity",
+      provider: disco_name,
+      amount: `${amount}`,
+      fee: chargeAmount,
+      total: amount + chargeAmount,
+      status: "pending", // webhook will finalize
+      number: meter_number,
+      response: responseData,
+    });
+
+    return res.json(responseData);
   } catch (error: any) {
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message || "Failed to buy electricity",
     });
   }
@@ -454,12 +641,17 @@ export const buyElectricity = async (req: Request, res: Response) => {
 
 export const validateMeter = async (req: Request, res: Response) => {
   try {
-    const meter = req.query.meter as string;
-    if (!meter) {
+    console.log("Validating meter...", req.query);
+    const { meternumber, disconame, mtype } = req.query as any;
+    if (!meternumber || !disconame || !mtype) {
       return res.status(400).json({ error: "Meter number is required" });
     }
 
-    const response = await alrahuzApi.validateMeter(meter);
+    const response = await alrahuzApi.validateMeter(
+      meternumber,
+      disconame,
+      mtype
+    );
     res.json(response.data);
   } catch (error: any) {
     res.status(500).json({
@@ -471,15 +663,71 @@ export const validateMeter = async (req: Request, res: Response) => {
 // CABLE //
 export const buyCable = async (req: Request, res: Response) => {
   try {
-    const { api, iuc, plan } = req.body;
-    if (!api || !iuc || !plan) {
+    const { smart_card_number, cableplan, plan_key, cablename } = req.body;
+    if (!smart_card_number || !cableplan || !plan_key || !cablename) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const response = await alrahuzApi.buyCable(req.body);
-    res.json(response.data);
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user || typeof user.balance !== "number") {
+      return res
+        .status(400)
+        .json({ error: "User not found or invalid balance" });
+    }
+
+    // Find plan price from PlanPrice model
+    const planPrice = await PlanPrice.findOne({ plan_key });
+    if (!planPrice) {
+      return res.status(400).json({ error: "Plan price not found" });
+    }
+    const sellingPrice = planPrice.selling_price || 0;
+    if (!sellingPrice) {
+      return res.status(400).json({ error: "Plan price not found" });
+    }
+    if (user.balance < sellingPrice) {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
+
+    // Call provider API
+    const response = await alrahuzApi.buyCable(
+      cablename,
+      cableplan,
+      smart_card_number
+    );
+    const responseData = response.data as any;
+
+    // Only debit wallet if provider succeeded
+    if (!responseData.status) {
+      return res.status(400).json({
+        error: "Failed to purchase cable subscription from provider",
+        response: responseData,
+      });
+    }
+
+    user.balance -= sellingPrice;
+    await user.save();
+
+    await Transaction.create({
+      user: user._id,
+      reference: responseData.data?.reference || "",
+      type: "cable",
+      provider: planPrice?.provider || "alrahuz",
+      amount: `${planPrice.plan}`,
+      fee: 0,
+      total: sellingPrice,
+      status: "pending", // webhook will finalize
+      number: smart_card_number,
+      response: responseData,
+    });
+
+    return res.json(responseData);
   } catch (error: any) {
-    res.status(500).json({
+    return res.status(500).json({
       error: error.message || "Failed to buy cable subscription",
     });
   }
@@ -487,12 +735,12 @@ export const buyCable = async (req: Request, res: Response) => {
 
 export const validateIUC = async (req: Request, res: Response) => {
   try {
-    const iuc = req.query.iuc as string;
-    if (!iuc) {
+    const { smart_card_number, cablename } = req.query as any;
+    if (!smart_card_number) {
       return res.status(400).json({ error: "IUC number is required" });
     }
 
-    const response = await alrahuzApi.validateIUC(iuc);
+    const response = await alrahuzApi.validateIUC(smart_card_number, cablename);
     res.json(response.data);
   } catch (error: any) {
     res.status(500).json({

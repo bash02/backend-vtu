@@ -23,7 +23,7 @@ export interface ITransaction extends Document {
 
   status: "pending" | "success" | "failed" | "reversed";
 
-  phone?: string;
+  number?: string;
   meterNumber?: string;
   smartCardNumber?: string;
 

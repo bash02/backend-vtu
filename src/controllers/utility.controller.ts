@@ -1,6 +1,42 @@
 import type { Request, Response } from "express";
-import { checkUserDetail } from "./alrahuz.controller";
-import { getDataPlans } from "./smePlug.Controller";
+import {
+  checkUserDetail,
+  buyData as alrahuzBuyData,
+} from "./alrahuz.controller";
+
+import { getDataPlans, purchaseDataPlan } from "./smePlug.Controller";
+
+export const buyData = async (req: Request, res: Response) => {
+  try {
+    const { network, plan_id, mobile_number, plan_key } = req.body;
+    if (!network || !plan_id || !mobile_number || !plan_key) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Missing required fields" });
+    }
+
+    // Determine provider from plan_key
+    const provider = plan_key.split(":")[0];
+
+    if (provider === "alrahuz") {
+      // Call Alrahuz purchase
+      return alrahuzBuyData(req, res);
+    } else if (provider === "smeplug") {
+      console.log("Proceeding with SmePlug purchase...");
+      // Call SMEPlug purchase
+      return purchaseDataPlan(req, res);
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, error: "Unknown provider in plan_key" });
+    }
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Failed to purchase data plan",
+    });
+  }
+};
 
 export const getAllPlans = async (req: Request, res: Response) => {
   try {
@@ -11,6 +47,7 @@ export const getAllPlans = async (req: Request, res: Response) => {
         status: (code: number) => fakeRes,
         json: (data: any) => {
           alrahuzResult = data;
+          console.log("Alrahuz Data Plans:", alrahuzResult);
           resolve(null);
         },
       } as unknown as Response;
@@ -24,6 +61,7 @@ export const getAllPlans = async (req: Request, res: Response) => {
         status: (code: number) => fakeRes,
         json: (data: any) => {
           smeplugResult = data;
+          console.log("SmePlug Data Plans:", smeplugResult);
           resolve(null);
         },
       } as unknown as Response;
@@ -32,8 +70,13 @@ export const getAllPlans = async (req: Request, res: Response) => {
 
     // Merge results into array as requested
     const result = [
-      { provider: "alrahuz", plans: alrahuzResult.dataplans || [] },
-      { provider: "smeplug", plans: smeplugResult.data || [] },
+      {
+        provider: "alrahuz",
+        dataplans: alrahuzResult.dataplans || [],
+        cableplans: alrahuzResult.cableplans || [],
+        // Exam: alrahuzResult.Exam || [],
+      },
+      { provider: "smeplug", dataplans: smeplugResult.data || [] },
     ];
     return res.json({ success: true, data: result });
   } catch (error: any) {

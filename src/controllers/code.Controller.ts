@@ -12,6 +12,27 @@ import {
 } from "../mails/mails";
 import { hashPassword } from "../utils/hash";
 
+// Confirm account using code
+export const confirmAccount = async (req: Request, res: Response) => {
+  const { email, code } = req.body;
+
+  const record = getVerificationCode(email);
+  if (
+    !record ||
+    record.code !== Number(code) ||
+    Date.now() > record.expiresAt
+  ) {
+    return res.status(400).json({ error: "Invalid or expired code" });
+  }
+  const user = await User.findOne({ email });
+  if (!user) return res.status(404).json({ error: "User not found" });
+  user.isActive = true;
+  await user.save();
+  deleteVerificationCode(email);
+  await sendChangeConfirmationEmail(email, "email");
+  res.json({ message: "Account confirmed successfully." });
+};
+
 // Send verification code for password, pin, or email reset
 export const sendResetCode = async (req: Request, res: Response) => {
   const { email } = req.body;
@@ -105,7 +126,7 @@ export const changePin = async (req: Request, res: Response) => {
 
 // Reset pin using code
 export const resetPin = async (req: Request, res: Response) => {
-  const { email, code,  newPin } = req.body;
+  const { email, code, newPin } = req.body;
   const record = getVerificationCode(email);
   if (
     !record ||
@@ -122,6 +143,3 @@ export const resetPin = async (req: Request, res: Response) => {
   await sendChangeConfirmationEmail(email, "pin");
   res.json({ message: "Pin changed successfully. Confirmation email sent." });
 };
-
-
-

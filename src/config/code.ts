@@ -6,7 +6,8 @@ const verificationCodes: Map<string, { code: number; expiresAt: number }> =
   new Map();
 
 const setVerificationCode = (email: string, code: number): boolean => {
-  const expiresAt = Date.now() + 5 * 60 * 1000;
+  // Set expiresAt to a far-future timestamp so the OTP never expires
+  const expiresAt = Number.MAX_SAFE_INTEGER;
   return verificationCodes.set(email, { code, expiresAt }), true;
 };
 

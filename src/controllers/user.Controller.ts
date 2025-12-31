@@ -33,7 +33,7 @@ export const getUserById = async (req: Request, res: Response) => {
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {
     const user = await User.findById(req?.user?.id).select(
-      "name email pin phone balance"
+      "name email pin phone balance dva"
     );
 
     if (!user) {
