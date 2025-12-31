@@ -107,11 +107,41 @@ export const updateUser = async (req: Request, res: Response) => {
   }
   try {
     // Only validate fields that are present (for PATCH, not all required)
-    const allowedFields = ["name", "email", "password", "phone", "pin"];
+    const allowedFields = [
+      "name",
+      "email",
+      "password",
+      "phone",
+      "pin",
+      "dva",
+      "isAdmin",
+      "isActive",
+    ];
     const data: Record<string, any> = {};
     for (const field of allowedFields) {
       if (field in req.body) {
-        data[field] = req.body[field];
+        if (
+          field === "dva" &&
+          typeof req.body.dva === "object" &&
+          req.body.dva !== null
+        ) {
+          // Only update allowed dva subfields
+          const dvaFields = [
+            "customer_code",
+            "account_number",
+            "account_name",
+            "bankname",
+            "currency",
+          ];
+          data.dva = {};
+          for (const subField of dvaFields) {
+            if (subField in req.body.dva) {
+              data.dva[subField] = req.body.dva[subField];
+            }
+          }
+        } else {
+          data[field] = req.body[field];
+        }
       }
     }
     // If no updatable fields provided
@@ -120,13 +150,14 @@ export const updateUser = async (req: Request, res: Response) => {
         .status(400)
         .json({ success: false, error: "No valid fields provided for update" });
     }
-    if (data.password) {
+    if (data.password || data.pin) {
       data.password = await hashPassword(data.password);
+      data.pin = await hashPassword(data.pin);
     }
     const updatedUser = await User.findByIdAndUpdate(id, data, {
       new: true,
       runValidators: true,
-    }).select("_id name email phone");
+    }).select("_id name email phone dva isAdmin isActive");
     if (!updatedUser) {
       return res.status(404).json({ success: false, error: "User not found" });
     }
