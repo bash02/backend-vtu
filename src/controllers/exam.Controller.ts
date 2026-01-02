@@ -28,10 +28,12 @@ export const getExams = async (_req: Request, res: Response) => {
 // Get a single exam by id
 export const getExamById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.query;
-    if (!id) {
-      return res.status(400).json({ error: "Missing id in query" });
-    }
+  const id = req.params.id || req.query.id;
+  if (!id) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing user id parameter" });
+  }
     const exam = await Exam.findById(id);
     if (!exam) {
       return res.status(404).json({ error: "Exam not found" });
@@ -45,10 +47,12 @@ export const getExamById = async (req: Request, res: Response) => {
 // Update an exam
 export const updateExam = async (req: Request, res: Response) => {
   try {
-    const { id } = req.query;
-    if (!id) {
-      return res.status(400).json({ error: "Missing id in query" });
-    }
+  const id = req.params.id || req.query.id;
+  if (!id) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing user id parameter" });
+  }
     const { name, amount, is_active } = req.body;
     const exam = await Exam.findByIdAndUpdate(
       id,
@@ -65,10 +69,12 @@ export const updateExam = async (req: Request, res: Response) => {
 // Delete an exam
 export const deleteExam = async (req: Request, res: Response) => {
   try {
-    const { id } = req.query;
-    if (!id) {
-      return res.status(400).json({ error: "Missing id in query" });
-    }
+  const id = req.params.id || req.query.id;
+  if (!id) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing user id parameter" });
+  }
     const exam = await Exam.findByIdAndDelete(id);
     if (!exam) return res.status(404).json({ error: "Exam not found" });
     return res.json({ success: true, message: "Exam deleted" });

@@ -8,7 +8,7 @@ router.post("/send-reset-code", codeController.sendResetCode);
 // Change password
 router.post("/change-password", codeController.changePassword);
 // Forget password
-router.post("/forget-password", codeController.forgetPassword);
+router.post("/forgot-password", codeController.forgetPassword);
 // Change pin
 router.post("/change-pin", codeController.changePin);
 // Reset pin

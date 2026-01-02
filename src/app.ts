@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import cors from "cors";
 import authRoute from "./routes/auth"; // matches filename exactly
 import userRoutes from "./routes/userRoutes";
 import codeRoutes from "./routes/codeRoutes";
@@ -22,6 +23,13 @@ dotenv.config();
 const app = express();
 
 app.use(express.json());
+
+// CORS configuration: allow specific frontend origin in production, allow all in development
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:8080";
+const corsOptions = process.env.NODE_ENV === "production"
+  ? { origin: FRONTEND_URL, credentials: true }
+  : { origin: true, credentials: true };
+app.use(cors(corsOptions));
 
 const isProd = process.env.NODE_ENV === "production";
 const mongoUri = isProd

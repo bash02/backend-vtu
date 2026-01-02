@@ -10,7 +10,7 @@ import {
   sendVerificationEmail,
   sendChangeConfirmationEmail,
 } from "../mails/mails";
-import { hashPassword } from "../utils/hash";
+import { hashPassword, comparePassword } from "../utils/hash";
 
 // Confirm account using code
 export const confirmAccount = async (req: Request, res: Response) => {
@@ -43,7 +43,6 @@ export const sendResetCode = async (req: Request, res: Response) => {
   setVerificationCode(email, code);
   try {
     await sendVerificationEmail(email, String(code));
-    console.log(`Verification email sent to: ${email}`);
     res.json({ message: "Verification code sent" });
   } catch (err) {
     console.error(`Failed to send verification email to: ${email}`, err);
@@ -51,7 +50,6 @@ export const sendResetCode = async (req: Request, res: Response) => {
   }
 };
 
-// Change password using code
 export const changePassword = async (req: Request, res: Response) => {
   const { email, code, oldPassword, newPassword } = req.body;
 
@@ -63,16 +61,26 @@ export const changePassword = async (req: Request, res: Response) => {
   ) {
     return res.status(400).json({ error: "Invalid or expired code" });
   }
+
   const user = await User.findOne({ email });
   if (!user) return res.status(404).json({ error: "User not found" });
-  const hashedOldPassword = await hashPassword(oldPassword);
-  if (user.password !== hashedOldPassword) {
+
+  // Use comparePassword to check if oldPassword matches stored hash
+  const isOldPasswordCorrect = await comparePassword(
+    oldPassword,
+    user.password
+  );
+  if (!isOldPasswordCorrect) {
     return res.status(400).json({ error: "Old password is incorrect" });
   }
+
+  // Hash new password before saving
   user.password = await hashPassword(newPassword);
   await user.save();
+
   deleteVerificationCode(email);
   await sendChangeConfirmationEmail(email, "password");
+
   res.json({
     message: "Password changed successfully. Confirmation email sent.",
   });
@@ -111,16 +119,23 @@ export const changePin = async (req: Request, res: Response) => {
   ) {
     return res.status(400).json({ error: "Invalid or expired code" });
   }
+
   const user = await User.findOne({ email });
-  const hashedOldPin = await hashPassword(oldPin);
-  if (user?.pin !== hashedOldPin) {
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  // Use bcrypt comparePassword to verify oldPin
+  const isOldPinCorrect = await comparePassword(oldPin, user.pin);
+  if (!isOldPinCorrect) {
     return res.status(400).json({ error: "Old pin is incorrect" });
   }
-  if (!user) return res.status(404).json({ error: "User not found" });
-  user.pin = newPin;
+
+  // Hash newPin before saving
+  user.pin = await hashPassword(newPin);
   await user.save();
+
   deleteVerificationCode(email);
   await sendChangeConfirmationEmail(email, "pin");
+
   res.json({ message: "Pin changed successfully. Confirmation email sent." });
 };
 
@@ -137,7 +152,7 @@ export const resetPin = async (req: Request, res: Response) => {
   }
   const user = await User.findOne({ email });
   if (!user) return res.status(404).json({ error: "User not found" });
-  user.pin = newPin;
+  user.pin = await hashPassword(newPin); // Hash the new pin before saving
   await user.save();
   deleteVerificationCode(email);
   await sendChangeConfirmationEmail(email, "pin");

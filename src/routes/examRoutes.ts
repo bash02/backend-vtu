@@ -12,7 +12,7 @@ const router = Router();
 router.post("/", createExam);
 router.get("/", getExams);
 router.get("/single", getExamById); // Use query param: /single?id=EXAM_ID
-router.put("/", updateExam);
+router.patch("/", updateExam);
 router.delete("/", deleteExam);
 
 export default router;

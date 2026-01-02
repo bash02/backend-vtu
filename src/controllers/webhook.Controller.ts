@@ -27,7 +27,6 @@ export const paystackWebhook = async (req: Request, res: Response) => {
 
     // Continue async processing (NO RESPONSE HERE)
     const event = req.body;
-    console.log("Received Paystack webhook event:", event);
 
     switch (event.event) {
       case "charge.success": {

@@ -22,7 +22,6 @@ export const buyData = async (req: Request, res: Response) => {
       // Call Alrahuz purchase
       return alrahuzBuyData(req, res);
     } else if (provider === "smeplug") {
-      console.log("Proceeding with SmePlug purchase...");
       // Call SMEPlug purchase
       return purchaseDataPlan(req, res);
     } else {
@@ -47,7 +46,6 @@ export const getAllPlans = async (req: Request, res: Response) => {
         status: (code: number) => fakeRes,
         json: (data: any) => {
           alrahuzResult = data;
-          console.log("Alrahuz Data Plans:", alrahuzResult);
           resolve(null);
         },
       } as unknown as Response;

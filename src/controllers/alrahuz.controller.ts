@@ -177,15 +177,15 @@ export async function processPlanTree(
       const category = p.plan_type ?? "";
       const size = p.plan ?? p.name ?? "";
       const validity = p.month_validate ?? "";
-      let planKey;
+      let plan_key;
       if (p.cable) {
-        planKey = generatePlanKey({
+        plan_key = generatePlanKey({
           api: "alrahuz",
           network: p.cable,
           name: p.package,
         });
       } else {
-        planKey = generatePlanKey({
+        plan_key = generatePlanKey({
           api: "alrahuz",
           network,
           category,
@@ -193,7 +193,7 @@ export async function processPlanTree(
           validity,
         });
       }
-      return ruleMap.has(planKey);
+      return ruleMap.has(plan_key);
     })
     .map((p) => {
       const network = p.plan_network ?? "";
@@ -201,16 +201,16 @@ export async function processPlanTree(
       const size = p.plan ?? p.name ?? "";
       const validity = p.month_validate ?? "";
 
-      let planKey;
+      let plan_key;
 
       if (p.cable) {
-        planKey = generatePlanKey({
+        plan_key = generatePlanKey({
           api: "alrahuz",
           network: p.cable,
           name: p.package,
         });
       } else {
-        planKey = generatePlanKey({
+        plan_key = generatePlanKey({
           api: "alrahuz",
           network,
           category,
@@ -219,16 +219,16 @@ export async function processPlanTree(
         });
       }
 
-      const rule = ruleMap.get(planKey);
+      const rule = ruleMap.get(plan_key);
 
       const basePlan = {
         ...p,
         ...(isAdmin && { api: rule?.api || "alrahuz" }),
         selling_price: rule?.selling_price || null,
         is_active: rule?.is_active || false,
-        planKey: planKey,
+        plan_key: plan_key,
       };
-      // Hide is_active and planKey for non-admins
+      // Hide is_active and plan_key for non-admins
       if (!isAdmin) {
         const { plan_amount, is_active, ...rest } = basePlan;
         return rest;
@@ -246,7 +246,6 @@ export const checkUserDetail = async (req: Request, res: Response) => {
 
     // Flattened Data plans
     const dataplans = await processPlanTree(userData?.Dataplans || {}, isAdmin);
-    console.log("Processed Data Plans:", dataplans);
 
     // Remove 'cablename' from Cableplan before processing
     const cableplanObj = { ...(userData?.Cableplan || {}) };
@@ -279,10 +278,12 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     const selling_price: number = req.body.selling_price;
     const is_active: boolean | undefined = req.body.is_active;
     const plan_key: string = req.body.plan_key;
-    const provider: string = req.body.provider;
+    const provider: string = req.body.provider || req.body.plan_network;
     const plan: string = req.body.plan;
     const plan_type: string = req.body.plan_type;
     const month_validate: string = req.body.month_validate;
+
+      console.log("Upsert Plan Price Request Body:", req.body);
 
     // Validation: required fields
     if (
@@ -299,6 +300,7 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
           "Plan key, api, selling price, provider, plan, and is active are required",
       });
     }
+
 
     // Upsert logic
     const existing = await PlanPrice.findOne({ plan_key });
@@ -641,7 +643,6 @@ export const buyElectricity = async (req: Request, res: Response) => {
 
 export const validateMeter = async (req: Request, res: Response) => {
   try {
-    console.log("Validating meter...", req.query);
     const { meternumber, disconame, mtype } = req.query as any;
     if (!meternumber || !disconame || !mtype) {
       return res.status(400).json({ error: "Meter number is required" });

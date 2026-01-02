@@ -112,6 +112,7 @@ export const updateUser = async (req: Request, res: Response) => {
       "email",
       "password",
       "phone",
+      "balance",
       "pin",
       "dva",
       "isAdmin",

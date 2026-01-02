@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 const ProviderSchema = new mongoose.Schema({
   name: {
     type: String,
-    enum: ["smeplug", "alrahuz", "billsadasub", "simhosting"],
+    enum: ["smeplug", "alrahuz", "bilalsadasub", "simhosting", "gongozconcept"],
     unique: true,
     required: true,
   },

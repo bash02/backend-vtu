@@ -102,24 +102,24 @@ export const getDataPlans = async (req: Request, res: Response) => {
     }))
   );
 
-  // Precompute planKey and network for each plan to avoid redundancy
+  // Precompute plan_key and network for each plan to avoid redundancy
   const allPlansWithKeys = allPlans.map((plan) => {
     const network = networkMap[plan.networkId] || "UNKNOWN";
-    const planKey = generatePlanKey({
+    const plan_key = generatePlanKey({
       api: "smeplug",
       network,
       name: plan.name,
     });
-    return { ...plan, network, planKey };
+    return { ...plan, network, plan_key };
   });
 
-  // For non-admins, filter to only plans with a matching planKey in the DB
+  // For non-admins, filter to only plans with a matching plan_key in the DB
   const filteredPlans = isAdmin
     ? allPlansWithKeys
-    : allPlansWithKeys.filter((plan) => ruleMap.has(plan.planKey));
+    : allPlansWithKeys.filter((plan) => ruleMap.has(plan.plan_key));
 
   const result = filteredPlans.map((plan) => {
-    const rule = ruleMap.get(plan.planKey);
+    const rule = ruleMap.get(plan.plan_key);
     const api =
       rule && rule.api
         ? rule.api
@@ -137,7 +137,7 @@ export const getDataPlans = async (req: Request, res: Response) => {
     return {
       ...plan,
       api,
-      plan_key: plan.planKey,
+      plan_key: plan.plan_key,
       selling_price: rule?.selling_price ?? null,
       is_active: rule?.is_active ?? false,
     };
@@ -156,6 +156,8 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     const plan_key: string = req.body.plan_key;
     const provider: string = req.body.provider;
     const plan: string = req.body.plan;
+
+    console.log("Upsert Plan Price Request Body:", req.body);
 
     if (!plan_key || !api || !selling_price || !provider || !plan) {
       return res.status(400).json({

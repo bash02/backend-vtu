@@ -1,5 +1,5 @@
 // utils/generatePlanKey.ts
-export interface PlanKeyParams {
+export interface planKeyParams {
   api?: string;
   network?: string;
   category?: string;
@@ -8,7 +8,7 @@ export interface PlanKeyParams {
   name?: string;
 }
 
-export function generatePlanKey(params: PlanKeyParams) {
+export function generatePlanKey(params: planKeyParams) {
   const { api, network, category, size, validity, name } = params;
   if (name) {
     const namePart = transformNameToColonFormat(name);
