@@ -283,21 +283,18 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     const plan_type: string = req.body.plan_type;
     const month_validate: string = req.body.month_validate;
 
-      console.log("Upsert Plan Price Request Body:", req.body);
-
     // Validation: required fields
     if (
       !plan_key ||
       !api ||
       !selling_price ||
       !provider ||
-      !plan ||
-      !is_active
+      !plan
     ) {
       return res.status(400).json({
         success: false,
         error:
-          "Plan key, api, selling price, provider, plan, and is active are required",
+          "Plan key, api, selling price, provider, plan, are required",
       });
     }
 

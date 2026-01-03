@@ -157,8 +157,6 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     const provider: string = req.body.provider;
     const plan: string = req.body.plan;
 
-    console.log("Upsert Plan Price Request Body:", req.body);
-
     if (!plan_key || !api || !selling_price || !provider || !plan) {
       return res.status(400).json({
         success: false,
