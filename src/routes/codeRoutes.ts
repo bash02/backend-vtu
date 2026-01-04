@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as codeController from "../controllers/code.Controller";
+import { auth } from "../middleware/auth";
 
 const router = Router();
 
@@ -15,6 +16,8 @@ router.post("/change-pin", codeController.changePin);
 router.post("/reset-pin", codeController.resetPin);
 
 // Confirm account
-router.post("/confirm-account", codeController.confirmAccount); 
+router.post("/confirm-account", codeController.confirmAccount);
+
+router.post("/compare-pin", auth, codeController.comparePin);
 
 export default router;
