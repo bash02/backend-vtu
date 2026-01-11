@@ -82,7 +82,7 @@ export const createUser = async (req: Request, res: Response) => {
       account_number: req.body.account_number,
       bank_code: req.body.bank_code,
       // Optional/default fields
-      preferred_bank: req.body.preferred_bank || "test-bank",
+      preferred_bank: req.body.preferred_bank || "wema-bank",
       country: req.body.country || "NG",
       subaccount: req.body.subaccount || undefined,
       split_code: req.body.split_code || undefined
