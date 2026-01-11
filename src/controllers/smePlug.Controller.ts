@@ -197,8 +197,6 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
   try {
     const { network, mobile_number, plan_id, plan_key } = req.body;
 
-    console.log("Purchase Data Plan Request:", req.body);
-
     if (!network || !mobile_number || !plan_id || !plan_key) {
       return res.status(400).json({ error: "Missing required fields" });
     }
@@ -233,7 +231,6 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
     
 
     const responseData = response.data as DataTransferResponse;
-    console.log("SMEPlug Purchase Response:", responseData);
 
     // Debit user wallet immediately on success from API
     if (responseData.status) {

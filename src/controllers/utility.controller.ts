@@ -60,7 +60,6 @@ export const getAllPlans = async (req: Request, res: Response) => {
         status: (code: number) => fakeRes,
         json: (data: any) => {
           smeplugResult = data;
-          console.log("SmePlug Data Plans:", smeplugResult);
           resolve(null);
         },
       } as unknown as Response;

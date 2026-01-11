@@ -7,7 +7,6 @@ const SECRET_KEY = process.env.SMEPLUG_SECRET_KEY || "";
 export const smePlugWebhook = async (req: Request, res: Response) => {
   try {
 
-    console.log(req.body)
 
     // Authorization check
     if (req.headers.authorization !== `Bearer ${SECRET_KEY}`) {

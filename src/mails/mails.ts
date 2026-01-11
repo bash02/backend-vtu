@@ -37,7 +37,6 @@ const sendVerificationEmail = async (to: string, code: string) => {
 
     // Send the email
     await transporter.sendMail(mailOptions);
-    console.log("Verification email sent successfully");
   } catch (error: any) {
     console.error("Error sending email:", error); // Log full error object
   }
@@ -58,7 +57,6 @@ const sendConfirmationEmail = async (to: string, code: string) => {
 
     // Send the email
     await transporter.sendMail(mailOptions);
-    console.log("Confirmation email sent successfully");
   } catch (error: any) {
     console.error("Error sending email:", error); // Log full error object
   }

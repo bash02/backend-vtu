@@ -46,7 +46,6 @@ export const paystackWebhook = async (req: Request, res: Response) => {
           const user = await User.findOne({
             "dva.account_number": accountNumber,
           });
-          console.log("User found by dva.account_number:", user);
           if (!user) {
             console.error(
               "User not found for DVA account number:",
@@ -82,8 +81,6 @@ export const paystackWebhook = async (req: Request, res: Response) => {
           await User.findByIdAndUpdate(userId, {
             $inc: { balance: amount - chargeAmount },
           });
-
-          console.log("User credited:", amount, "User:", userId);
 
           // Send push notification if Expo token exists
           const tokenDoc = await ExpoToken.findOne({ userId });
