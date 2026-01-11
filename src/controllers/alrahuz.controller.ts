@@ -365,11 +365,12 @@ export const buyData = async (req: Request, res: Response) => {
     }
 
     // Call Alrahuz API
-    const response = await alrahuzApi.buyData({
+    const response = await alrahuzApi.buyData(
       network,
       mobile_number,
       plan_id,
-    });
+    );  
+    console.log(response.data);
 
     const responseData = response.data as any;
 

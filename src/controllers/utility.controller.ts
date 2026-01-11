@@ -9,6 +9,7 @@ import { getDataPlans, purchaseDataPlan } from "./smePlug.Controller";
 export const buyData = async (req: Request, res: Response) => {
   try {
     const { network, plan_id, mobile_number, plan_key } = req.body;
+    
     if (!network || !plan_id || !mobile_number || !plan_key) {
       return res
         .status(400)

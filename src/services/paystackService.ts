@@ -46,6 +46,26 @@ export type DvaBankProvidersResponse = {
   data: DvaBankProvider[];
 }
 
+export type PaystackBank = {
+  name: string;
+  slug: string;
+  code: string;
+  longcode?: string;
+  country: string;
+  currency: string;
+  type?: string;
+  pay_with_bank: boolean;
+  active?: boolean;
+};
+
+export type PaystackBankListResponse = {
+  status: boolean;
+  message: string;
+  data: PaystackBank[];
+};
+
+
+
 // Assign/Create a DVA (single-step)
 export const assignDedicatedAccount = async (
   data: AssignDedicatedAccountData
@@ -57,3 +77,16 @@ export const assignDedicatedAccount = async (
 export const fetchDvaBanks = async () => {
   return paystackApi.get("/dedicated_account/available_providers");
 }
+
+export const getBankList = async (
+  country: string = "nigeria"
+): Promise<{ ok: boolean; data?: PaystackBankListResponse }> => {
+  const response = await paystackApi.get<PaystackBankListResponse>(
+    `/bank?country=${country}`
+  );
+
+  return {
+    ok: response.ok,
+    data: response.data,
+  };
+};

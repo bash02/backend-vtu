@@ -15,6 +15,7 @@ import providerRoutes from "./routes/provider.routes";
 import utilityRoutes from "./routes/utilityRoutes";
 import examRoutes from "./routes/examRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
+import bankRoutes from "./routes/bankRoutes";
 
 import { notFound, errorHandler } from "./middleware/errorMiddleware";
 
@@ -54,6 +55,7 @@ app.use("/api/admin/providers", providerRoutes); // Example admin route
 app.use("/api/utility", utilityRoutes); // Utility routes to be added here
 app.use("/api/exams", examRoutes);
 app.use("/api/notification", notificationRoutes);
+app.use("/api", bankRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -7,6 +7,7 @@ import { hashPassword } from "../utils/hash";
 import { User } from "../models/user";
 import { sendVerificationEmail } from "../mails/mails";
 import { generateVerificationCode, setVerificationCode } from "../config/code";
+import { assignDedicatedAccount } from "../services/paystackService";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -70,6 +71,27 @@ export const createUser = async (req: Request, res: Response) => {
     user.password = await hashPassword(user.password);
     user.pin = await hashPassword(user.pin);
     await user.save();
+
+    // Assign DVA after user creation
+    const dvaPayload = {
+      email: user.email,
+      first_name: user.name?.split(" ")[0] || user.name,
+      last_name: user.name?.split(" ")[1] || "",
+      phone: user.phone,
+      bvn: req.body.bvn,
+      account_number: req.body.account_number,
+      bank_code: req.body.bank_code,
+      // Optional/default fields
+      preferred_bank: req.body.preferred_bank || "test-bank",
+      country: req.body.country || "NG",
+      subaccount: req.body.subaccount || undefined,
+      split_code: req.body.split_code || undefined
+    };
+    const dvaResponse = await assignDedicatedAccount(dvaPayload);
+    // Only check for success, do not return DVA response to client
+    if (dvaResponse.ok) {
+      await user.save();
+    }
 
     // Send verification code after user creation
     const code = generateVerificationCode();

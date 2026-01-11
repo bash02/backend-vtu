@@ -166,7 +166,7 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     }
 
     // Upsert logic
-    const existing = await PlanPrice.findOne({ plan_key, api, provider });
+    const existing = await PlanPrice.findOne({ plan_key });
     if (existing) {
       existing.selling_price = selling_price;
       if (is_active !== undefined) existing.is_active = is_active;
@@ -196,6 +196,8 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
 export const purchaseDataPlan = async (req: Request, res: Response) => {
   try {
     const { network, mobile_number, plan_id, plan_key } = req.body;
+
+    console.log("Purchase Data Plan Request:", req.body);
 
     if (!network || !mobile_number || !plan_id || !plan_key) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -228,7 +230,10 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
       plan_id
     );
 
+    
+
     const responseData = response.data as DataTransferResponse;
+    console.log("SMEPlug Purchase Response:", responseData);
 
     // Debit user wallet immediately on success from API
     if (responseData.status) {
