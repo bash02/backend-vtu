@@ -49,9 +49,9 @@ export const userCreateSchema = Joi.object({
         "Phone must be 7-15 digits and may include a leading + (no spaces)",
     }),
   pin: Joi.string().length(4).optional().allow(null, ""),
-  account_number: Joi.string().required(),  // add this
-  bvn: Joi.string().required(),             // add this
-  bank_code: Joi.string().required(),       // add this
+  // account_number: Joi.string().required(),  // add this
+  // bvn: Joi.string().required(),             // add this
+  // bank_code: Joi.string().required(),       // add this
   // balance: Joi.number().min(0).max(1000000).optional(),
   // isAdmin: Joi.boolean().optional(),
   // isActive: Joi.boolean().optional(),

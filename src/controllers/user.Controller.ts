@@ -78,14 +78,12 @@ export const createUser = async (req: Request, res: Response) => {
       first_name: user.name?.split(" ")[0] || user.name,
       last_name: user.name?.split(" ")[1] || "",
       phone: user.phone,
-      bvn: req.body.bvn,
-      account_number: req.body.account_number,
-      bank_code: req.body.bank_code,
+      // bvn: req.body.bvn,
+      // account_number: req.body.account_number,
+      // bank_code: req.body.bank_code,
       // Optional/default fields
       preferred_bank: req.body.preferred_bank || "wema-bank",
       country: req.body.country || "NG",
-      subaccount: req.body.subaccount || undefined,
-      split_code: req.body.split_code || undefined
     };
     const dvaResponse = await assignDedicatedAccount(dvaPayload);
     // Only check for success, do not return DVA response to client
