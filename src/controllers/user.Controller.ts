@@ -72,43 +72,56 @@ export const createUser = async (req: Request, res: Response) => {
     user.pin = await hashPassword(user.pin);
     await user.save();
 
-    // Assign DVA after user creation
-    const dvaPayload = {
-      email: user.email,
-      first_name: user.name?.split(" ")[0] || user.name,
-      last_name: user.name?.split(" ")[1] || "",
-      phone: user.phone,
-      // bvn: req.body.bvn,
-      // account_number: req.body.account_number,
-      // bank_code: req.body.bank_code,
-      // Optional/default fields
-      preferred_bank: req.body.preferred_bank || "wema-bank",
-      country: req.body.country || "NG",
-    };
-    const dvaResponse = await assignDedicatedAccount(dvaPayload);
-    // Only check for success, do not return DVA response to client
-    if (dvaResponse.ok) {
-      await user.save();
-    }
-
-    // Send verification code after user creation
+    // Generate verification code
     const code = generateVerificationCode();
     setVerificationCode(user.email, code);
     await sendVerificationEmail(user.email, String(code));
 
+    // Create token
     const token = signToken({
       id: user._id,
       email: user.email,
       role: user.isAdmin ? "admin" : "user",
     });
-    res
-      .status(201)
+
+    // ==============================
+    //  SEND RESPONSE TO CLIENT NOW
+    // ==============================
+    res.status(201)
       .header("x-auth-token", token)
       .json({
         success: true,
         user: _.pick(user, ["_id", "name", "email", "phone", "pin"]),
         message: "User created successfully. Verification code sent.",
       });
+
+    // =========================================
+    //  RUN DVA GENERATION IN BACKGROUND
+    // =========================================
+    setImmediate(async () => {
+      try {
+        const dvaPayload = {
+          email: user.email,
+          first_name: user.name?.split(" ")[0] || user.name,
+          last_name: user.name?.split(" ")[1] || "",
+          phone: user.phone,
+          preferred_bank: req.body.preferred_bank || "wema-bank",
+          country: req.body.country || "NG",
+        };
+
+        const dvaResponse = await assignDedicatedAccount(dvaPayload);
+
+        if (dvaResponse.ok) {
+          console.log("DVA assigned successfully for:", user.email);
+          await user.save();
+        } else {
+          console.error("DVA assignment failed:", dvaResponse);
+        }
+      } catch (err) {
+        console.error("DVA background error:", err);
+      }
+    });
+
   } catch (err) {
     res.status(400).json({
       success: false,
@@ -116,6 +129,7 @@ export const createUser = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 // PATCH: Partially update user fields. Supports id from either params or query.
 export const updateUser = async (req: Request, res: Response) => {
