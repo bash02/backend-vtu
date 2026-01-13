@@ -65,6 +65,7 @@ export const createUser = async (req: Request, res: Response) => {
         .status(400)
         .json({ success: false, error: "User already registered." });
 
+    // Create new user
     user = new User(
       _.pick(req.body, ["name", "email", "password", "phone", "pin"])
     );
@@ -72,12 +73,12 @@ export const createUser = async (req: Request, res: Response) => {
     user.pin = await hashPassword(user.pin);
     await user.save();
 
-    // Generate verification code
+    // Generate and send verification code
     const code = generateVerificationCode();
     setVerificationCode(user.email, code);
     await sendVerificationEmail(user.email, String(code));
 
-    // Create token
+    // Create JWT token
     const token = signToken({
       id: user._id,
       email: user.email,
@@ -85,7 +86,7 @@ export const createUser = async (req: Request, res: Response) => {
     });
 
     // ==============================
-    //  SEND RESPONSE TO CLIENT NOW
+    // SEND RESPONSE IMMEDIATELY
     // ==============================
     res.status(201)
       .header("x-auth-token", token)
@@ -96,31 +97,29 @@ export const createUser = async (req: Request, res: Response) => {
       });
 
     // =========================================
-    //  RUN DVA GENERATION IN BACKGROUND
+    // 100% NON-BLOCKING BACKGROUND DVA (FIRE & FORGET)
     // =========================================
-    setImmediate(async () => {
+    (async () => {
       try {
         const dvaPayload = {
           email: user.email,
           first_name: user.name?.split(" ")[0] || user.name,
           last_name: user.name?.split(" ")[1] || "",
           phone: user.phone,
-          preferred_bank: req.body.preferred_bank || "wema-bank",
+          preferred_bank: req.body.preferred_bank || "test-bank",
           country: req.body.country || "NG",
         };
 
-        const dvaResponse = await assignDedicatedAccount(dvaPayload);
+        // We do NOT check response
+        // We do NOT care if it fails
+        // We do NOT await anything after this
+        await assignDedicatedAccount(dvaPayload);
 
-        if (dvaResponse.ok) {
-          console.log("DVA assigned successfully for:", user.email);
-          await user.save();
-        } else {
-          console.error("DVA assignment failed:", dvaResponse);
-        }
       } catch (err) {
-        console.error("DVA background error:", err);
+        // Even this error log is optional
+        console.error("Background DVA error (ignored):", err);
       }
-    });
+    })(); // Detached, non-blocking
 
   } catch (err) {
     res.status(400).json({
@@ -129,6 +128,7 @@ export const createUser = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 
 // PATCH: Partially update user fields. Supports id from either params or query.
