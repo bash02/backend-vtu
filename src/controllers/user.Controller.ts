@@ -57,69 +57,36 @@ export const getCurrentUser = async (req: Request, res: Response) => {
   }
 };
 
+// controllers/auth.controller.ts
+
 export const createUser = async (req: Request, res: Response) => {
   try {
     let user = await User.findOne({ email: req.body.email });
     if (user)
-      return res
-        .status(400)
-        .json({ success: false, error: "User already registered." });
+      return res.status(400).json({ success: false, error: "User already registered." });
 
-    // Create new user
-    user = new User(
-      _.pick(req.body, ["name", "email", "password", "phone", "pin"])
-    );
+    user = new User(_.pick(req.body, ["name", "email", "password", "phone", "pin"]));
     user.password = await hashPassword(user.password);
     user.pin = await hashPassword(user.pin);
     await user.save();
 
-    // Generate and send verification code
     const code = generateVerificationCode();
     setVerificationCode(user.email, code);
     await sendVerificationEmail(user.email, String(code));
 
-    // Create JWT token
     const token = signToken({
       id: user._id,
       email: user.email,
       role: user.isAdmin ? "admin" : "user",
     });
 
-    // ==============================
-    // SEND RESPONSE IMMEDIATELY
-    // ==============================
     res.status(201)
       .header("x-auth-token", token)
       .json({
         success: true,
-        user: _.pick(user, ["_id", "name", "email", "phone", "pin"]),
+        user: _.pick(user, ["_id", "name", "email", "phone"]),
         message: "User created successfully. Verification code sent.",
       });
-
-    // =========================================
-    // 100% NON-BLOCKING BACKGROUND DVA (FIRE & FORGET)
-    // =========================================
-    (async () => {
-      try {
-        const dvaPayload = {
-          email: user.email,
-          first_name: user.name?.split(" ")[0] || user.name,
-          last_name: user.name?.split(" ")[1] || "",
-          phone: user.phone,
-          preferred_bank: req.body.preferred_bank || "test-bank",
-          country: req.body.country || "NG",
-        };
-
-        // We do NOT check response
-        // We do NOT care if it fails
-        // We do NOT await anything after this
-        await assignDedicatedAccount(dvaPayload);
-
-      } catch (err) {
-        // Even this error log is optional
-        console.error("Background DVA error (ignored):", err);
-      }
-    })(); // Detached, non-blocking
 
   } catch (err) {
     res.status(400).json({
@@ -128,6 +95,8 @@ export const createUser = async (req: Request, res: Response) => {
     });
   }
 };
+
+
 
 
 

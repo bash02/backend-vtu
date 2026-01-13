@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { fetchProvidersController, getBankListController } from "../controllers/bank.Controller";
+import { fetchProvidersController, generateDVA, getBankListController } from "../controllers/bank.Controller";
 
 const router = Router();
 
@@ -8,5 +8,7 @@ router.get("/banks", getBankListController);
 
 // GET /api/providers
 router.get("/providers", fetchProvidersController);
+
+router.post("/dva/generate", generateDVA);
 
 export default router;

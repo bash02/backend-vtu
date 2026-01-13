@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
-import { fetchDvaBanks, getBankList } from "../services/paystackService";
+import { assignDedicatedAccount, fetchDvaBanks, getBankList } from "../services/paystackService";
+import { User } from "../models/user";
 
 export const getBankListController = async (req: Request, res: Response) => {
   try {
@@ -28,3 +29,38 @@ export const fetchProvidersController = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: "Server error" });
   }
 }
+
+
+// controllers/dva.controller.ts
+
+export const generateDVA = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id as string | undefined;
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ success: false, error: "User not found" });
+
+    const dvaPayload = {
+      email: user.email,
+      first_name: user.name?.split(" ")[0] || user.name,
+      last_name: user.name?.split(" ")[1] || "",
+      phone: user.phone,
+      preferred_bank: "wema-bank",
+      country: "NG",
+    };
+
+    const dvaResponse = await assignDedicatedAccount(dvaPayload);
+
+    res.json({
+      success: true,
+      message: "DVA request sent",
+      data: dvaResponse,
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : "DVA generation failed",
+    });
+  }
+};
