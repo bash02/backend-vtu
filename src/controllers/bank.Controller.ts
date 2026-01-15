@@ -35,7 +35,7 @@ export const fetchProvidersController = async (req: Request, res: Response) => {
 
 export const generateDVA = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id as string | undefined;
+    const userId = req.user._id || req.user.id || undefined;
     if (!userId)
       return res.status(400).json({ success: false, error: "User ID is required" });
     const user = await User.findById(userId);
