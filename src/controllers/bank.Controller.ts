@@ -51,8 +51,7 @@ export const generateDVA = async (req: Request, res: Response) => {
       country: "NG",
     };
 
-    const dvaResponse = await assignDedicatedAccount(dvaPayload);
-    console.log(dvaResponse);
+    const dvaResponse = await assignDedicatedAccount(dvaPayload)
 
     res.json({
       success: true,
