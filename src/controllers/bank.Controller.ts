@@ -35,12 +35,22 @@ export const fetchProvidersController = async (req: Request, res: Response) => {
 
 export const generateDVA = async (req: Request, res: Response) => {
   try {
-    const userId = req?.user?.id || undefined;
-    if (!userId)
-      return res.status(400).json({ success: false, error: "User ID is required" });
+    const userId = req?.user?.id;
+    if (!userId) return res.status(400).json({ success: false, error: "User ID required" });
+
     const user = await User.findById(userId);
-    if (!user)
-      return res.status(404).json({ success: false, error: "User not found" });
+    if (!user) return res.status(404).json({ success: false, error: "User not found" });
+
+    if (user.dvaReserved) {
+      return res.status(409).json({
+        success: false,
+        error: "DVA generation already in progress. Please wait.",
+      });
+    }
+
+    // Set reserved flag
+    user.dvaReserved = true;
+    await user.save();
 
     const dvaPayload = {
       email: user.email,
@@ -51,16 +61,19 @@ export const generateDVA = async (req: Request, res: Response) => {
       country: "NG",
     };
 
-    const dvaResponse = await assignDedicatedAccount(dvaPayload)
+    const dvaResponse = await assignDedicatedAccount(dvaPayload);
 
-    res.json({
-      success: true,
-      message: "DVA request sent",
-      data: dvaResponse,
-    });
+    if (!dvaResponse.ok) {
+      // Clear reserved flag on failure
+      user.dvaReserved = false;
+      await user.save();
 
+      return res.status(500).json({ success: false, error: "Failed to send DVA generation request" });
+    }
+
+    return res.json({ success: true, message: "DVA generation request sent", data: dvaResponse });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: err instanceof Error ? err.message : "DVA generation failed",
     });

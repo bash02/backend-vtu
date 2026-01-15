@@ -22,10 +22,10 @@ export const paystackWebhook = async (req: Request, res: Response) => {
       return res.status(401).send("Invalid signature");
     }
 
-    // RESPOND IMMEDIATELY
+    // Respond immediately to Paystack
     res.status(200).send("OK");
 
-    // Continue async processing (NO RESPONSE HERE)
+    // Continue async processing (no further response)
     const event = req.body;
 
     switch (event.event) {
@@ -42,22 +42,17 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             return;
           }
 
-          // Find user by dva.account_number
+          // Find user by DVA account number
           const user = await User.findOne({
             "dva.account_number": accountNumber,
           });
           if (!user) {
-            console.error(
-              "User not found for DVA account number:",
-              accountNumber
-            );
+            console.error("User not found for DVA account number:", accountNumber);
             return;
           }
           const userId = user._id;
 
-          const exists = await Transaction.findOne({
-            reference: tx.reference,
-          });
+          const exists = await Transaction.findOne({ reference: tx.reference });
           if (exists) return;
 
           const amount = tx.amount / 100;
@@ -73,7 +68,7 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             amount: `${amount}`,
             fee: chargeAmount,
             total: amount - chargeAmount,
-            number: accountNumber || "",
+            number: accountNumber,
             status: "success",
             response: tx,
           });
@@ -86,9 +81,7 @@ export const paystackWebhook = async (req: Request, res: Response) => {
           const tokenDoc = await ExpoToken.findOne({ userId });
           if (tokenDoc) {
             const title = "Wallet Funded";
-            const body = `Your wallet has been credited with ₦${
-              amount - chargeAmount
-            }. Reference: ${tx.reference}`;
+            const body = `Your wallet has been credited with ₦${amount - chargeAmount}. Reference: ${tx.reference}`;
             await sendExpoNotification(tokenDoc.expoPushToken, title, body);
           }
         } catch (err) {
@@ -100,15 +93,12 @@ export const paystackWebhook = async (req: Request, res: Response) => {
       case "dedicatedaccount.assign.success": {
         try {
           const data = event.data;
-
-          // Find user by email from the webhook data
           const user = await User.findOne({ email: data.customer.email });
           if (!user) {
             console.error("User not found for email:", data.customer.email);
             return;
           }
 
-          // Update user.dva subdocument with DVA info
           user.dva = {
             customer_code: data.customer.customer_code,
             account_number: data.dedicated_account.account_number,
@@ -116,28 +106,48 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             bankname: data.dedicated_account.bank.name,
             currency: data.dedicated_account.currency,
           };
+
+          // Clear reserved flag: DVA fully assigned now
+          user.dvaReserved = false;
+
           await user.save();
 
-          console.log("Dedicated account saved in user.dva for:", user._id);
-
-          // Send push notification if Expo token exists
+          // Send push notification if token exists
           const tokenDoc = await ExpoToken.findOne({ userId: user._id });
           if (tokenDoc) {
             const title = "Dedicated Account Assigned";
             const body = `A dedicated bank account has been assigned to you: ${data.dedicated_account.account_number} (${data.dedicated_account.bank.name})`;
             await sendExpoNotification(tokenDoc.expoPushToken, title, body);
           }
+
+          console.log("Dedicated account saved and reserved flag cleared for user:", user._id);
         } catch (err) {
           console.error("DVA assign error:", err);
         }
         break;
       }
 
+      case "dedicatedaccount.assign.failed": {
+        try {
+          const data = event.data;
+          const user = await User.findOne({ email: data.customer.email });
+          if (!user) return;
+
+          // Clear reserved flag on failure so user can retry
+          user.dvaReserved = false;
+          await user.save();
+        } catch (err) {
+          console.error("DVA assign failure error:", err);
+        }
+        break;
+      }
+
       default:
+        // Other webhook events can be handled here if needed
         break;
     }
   } catch (err) {
-    // Only happens BEFORE response is sent
+    // Errors before sending response
     console.error("Webhook fatal error:", err);
     if (!res.headersSent) {
       res.status(500).send("Webhook error");

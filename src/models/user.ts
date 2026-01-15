@@ -38,6 +38,7 @@ const userSchema = new mongoose.Schema({
   },
   isAdmin: { type: mongoose.Schema.Types.Boolean, default: false },
   isActive: { type: mongoose.Schema.Types.Boolean, default: true },
+  dvaReserved: { type: Boolean, default: false },  // reserved but not completed
   dva: {
     customer_code: { type: mongoose.Schema.Types.String, default: null },
     account_number: { type: mongoose.Schema.Types.String, default: null },
