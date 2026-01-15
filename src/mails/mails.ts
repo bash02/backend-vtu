@@ -1,17 +1,10 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import pug from "pug";
 import path from "path";
+import dotenv from "dotenv";
+dotenv.config();
 
-// Create a transporter for Gmail SMTP
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY!);
 
 // Function to render the Pug template
 const renderPugTemplate = (
@@ -22,47 +15,41 @@ const renderPugTemplate = (
   return pug.renderFile(filePath, data);
 };
 
-// Function to send the verification email
+// Function to send verification email
 const sendVerificationEmail = async (to: string, code: string) => {
   try {
-    // Render the Pug template
     const html = renderPugTemplate("verification", { code });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    await resend.emails.send({
+      from: process.env.RESEND_API_EMAIL!,
       to,
       subject: "Verify Your Account",
       html,
-    };
-
-    // Send the email
-    await transporter.sendMail(mailOptions);
-  } catch (error: any) {
-    console.error("Error sending email:", error); // Log full error object
+    });
+    console.log(`Verification email sent to ${to}`);
+  } catch (error) {
+    console.error("Error sending verification email:", error);
   }
 };
 
-// Function to send the activation email
+// Function to send confirmation email
 const sendConfirmationEmail = async (to: string, code: string) => {
   try {
-    // Render the Pug template
     const html = renderPugTemplate("confirmation", { code });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    await resend.emails.send({
+      from: process.env.RESEND_API_EMAIL!,
       to,
       subject: "Verify Your Account",
       html,
-    };
-
-    // Send the email
-    await transporter.sendMail(mailOptions);
-  } catch (error: any) {
-    console.error("Error sending email:", error); // Log full error object
+    });
+    console.log(`Confirmation email sent to ${to}`);
+  } catch (error) {
+    console.error("Error sending confirmation email:", error);
   }
 };
 
-// Function to send the change confirmation email
+// Function to send change confirmation email
 const sendChangeConfirmationEmail = async (
   to: string,
   type: "password" | "pin" | "email",
@@ -74,16 +61,16 @@ const sendChangeConfirmationEmail = async (
       newEmail: options.newEmail,
       date: new Date().toLocaleString(),
     });
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+
+    await resend.emails.send({
+      from: process.env.RESEND_API_EMAIL!,
       to,
       subject: "Account Change Confirmation",
       html,
-    };
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Change confirmation email sent", info);
-  } catch (error: any) {
-    console.error("Error sending change confirmation email:", error); // Log full error object
+    });
+    console.log(`Change confirmation email sent to ${to}`);
+  } catch (error) {
+    console.error("Error sending change confirmation email:", error);
   }
 };
 
