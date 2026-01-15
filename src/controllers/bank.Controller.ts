@@ -35,7 +35,6 @@ export const fetchProvidersController = async (req: Request, res: Response) => {
 
 export const generateDVA = async (req: Request, res: Response) => {
   try {
-    console.log(req.user);
     const userId = req?.user?.id || undefined;
     if (!userId)
       return res.status(400).json({ success: false, error: "User ID is required" });
@@ -53,6 +52,7 @@ export const generateDVA = async (req: Request, res: Response) => {
     };
 
     const dvaResponse = await assignDedicatedAccount(dvaPayload);
+    console.log(dvaResponse);
 
     res.json({
       success: true,
