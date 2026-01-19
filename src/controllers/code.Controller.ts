@@ -14,7 +14,7 @@ import { hashPassword, comparePassword } from "../utils/hash";
 
 // Confirm account using code
 export const confirmAccount = async (req: Request, res: Response) => {
-  const { email, code } = req.body;
+  const { email, code } = req.body ;
 
   const record = getVerificationCode(email);
   if (
@@ -29,7 +29,7 @@ export const confirmAccount = async (req: Request, res: Response) => {
   user.isActive = true;
   await user.save();
   deleteVerificationCode(email);
-  await sendChangeConfirmationEmail(email, "email");
+  // await sendChangeConfirmationEmail(email, "email");
   res.json({ message: "Account confirmed successfully." });
 };
 
@@ -42,7 +42,7 @@ export const sendResetCode = async (req: Request, res: Response) => {
   const code = generateVerificationCode();
   setVerificationCode(email, code);
   try {
-    await sendVerificationEmail(email, String(code));
+    // await sendVerificationEmail(email, String(code));
     res.json({ message: "Verification code sent" });
   } catch (err) {
     console.error(`Failed to send verification email to: ${email}`, err);
@@ -79,7 +79,7 @@ export const changePassword = async (req: Request, res: Response) => {
   await user.save();
 
   deleteVerificationCode(email);
-  await sendChangeConfirmationEmail(email, "password");
+  // await sendChangeConfirmationEmail(email, "password");
 
   res.json({
     message: "Password changed successfully. Confirmation email sent.",
@@ -102,7 +102,7 @@ export const forgetPassword = async (req: Request, res: Response) => {
   user.password = await hashPassword(newPassword);
   await user.save();
   deleteVerificationCode(email);
-  await sendChangeConfirmationEmail(email, "password");
+  // await sendChangeConfirmationEmail(email, "password");
   res.json({
     message: "Password changed successfully. Confirmation email sent.",
   });
@@ -134,7 +134,7 @@ export const changePin = async (req: Request, res: Response) => {
   await user.save();
 
   deleteVerificationCode(email);
-  await sendChangeConfirmationEmail(email, "pin");
+  // await sendChangeConfirmationEmail(email, "pin");
 
   res.json({ message: "Pin changed successfully. Confirmation email sent." });
 };
@@ -155,7 +155,7 @@ export const resetPin = async (req: Request, res: Response) => {
   user.pin = await hashPassword(newPin); // Hash the new pin before saving
   await user.save();
   deleteVerificationCode(email);
-  await sendChangeConfirmationEmail(email, "pin");
+  // await sendChangeConfirmationEmail(email, "pin");
   res.json({ message: "Pin changed successfully. Confirmation email sent." });
 };
 
