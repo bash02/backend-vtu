@@ -23,7 +23,7 @@ export const confirmAccount = async (req: Request, res: Response) => {
     Date.now() > record.expiresAt
   ) {
     return res.status(400).json({ error: "Invalid or expired code" });
-  }
+  } 
   const user = await User.findOne({ email });
   if (!user) return res.status(404).json({ error: "User not found" });
   user.isActive = true;
