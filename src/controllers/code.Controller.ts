@@ -6,10 +6,6 @@ import {
   getVerificationCode,
   deleteVerificationCode,
 } from "../config/code";
-import {
-  sendVerificationEmail,
-  sendChangeConfirmationEmail,
-} from "../mails/mails";
 import { hashPassword, comparePassword } from "../utils/hash";
 
 // Confirm account using code
