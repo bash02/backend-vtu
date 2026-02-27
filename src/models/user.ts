@@ -1,22 +1,61 @@
+import mongoose from "mongoose";
 
-import { PrismaClient } from "@prisma/client";
+const userSchema = new mongoose.Schema({
+  name: {
+    type: mongoose.Schema.Types.String,
+    required: true,
+    minlength: 5,
+    maxlength: 50,
+  },
+  email: {
+    type: mongoose.Schema.Types.String,
+    required: true,
+    minlength: 5,
+    maxlength: 255,
+    unique: true,
+  },
+  password: {
+    type: mongoose.Schema.Types.String,
+    required: true,
+    minlength: 5,
+    maxlength: 1024,
+  },
+  pin: {
+    type: mongoose.Schema.Types.String,
+    length: 4,
+    default: null,
+  },
+  phone: {
+    type: mongoose.Schema.Types.String,
+    required: true,
+    length: 11,
+  },
+  balance: {
+    type: mongoose.Schema.Types.Number,
+    min: 0.0,
+    max: 1000000.0,
+    default: 0.0,
+  },
+  isAdmin: { type: mongoose.Schema.Types.Boolean, default: false },
+  isActive: { type: mongoose.Schema.Types.Boolean, default: true },
+  dvaReserved: { type: Boolean, default: false },  // reserved but not completed
+  dva: {
+    customer_code: { type: mongoose.Schema.Types.String, default: null },
+    account_number: { type: mongoose.Schema.Types.String, default: null },
+    account_name: { type: mongoose.Schema.Types.String, default: null },
+    bankname: { type: mongoose.Schema.Types.String, default: null },
+    currency: { type: mongoose.Schema.Types.String, default: null },
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
-const prisma = new PrismaClient();
+const User = mongoose.model("User", userSchema);
 
-export const UserModel = {
-  async create(data: { name: string; email: string; password: string; role?: string; deleted?: boolean; synced?: boolean }) {
-    return prisma.user.create({ data });
-  },
-  async findAll() {
-    return prisma.user.findMany();
-  },
-  async findById(id: number) {
-    return prisma.user.findUnique({ where: { id } });
-  },
-  async update(id: number, data: Partial<{ name: string; email: string; password: string; role: string; deleted: boolean; synced: boolean }>) {
-    return prisma.user.update({ where: { id }, data });
-  },
-  async delete(id: number) {
-    return prisma.user.delete({ where: { id } });
-  },
-};
+export { User };

@@ -4,45 +4,49 @@ import type { Request, Response } from "express";
 import _ from "lodash";
 import { signToken } from "../utils/jwt";
 import { hashPassword } from "../utils/hash";
-import { UserModel } from "../models/user";
-
+import { User } from "../models/user";
+import { sendVerificationEmail } from "../mails/mails";
+import { generateVerificationCode, setVerificationCode } from "../config/code";
+import { assignDedicatedAccount } from "../services/paystackService";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
-    if (!req.user?.isAdmin) {
-      return res.status(403).json({ success: false, error: "Only admins can view all users" });
-    }
-
-    const users = await UserModel.findAll();
-    // Remove password field
-    const sanitizedUsers = users.map(u => _.omit(u, ["password"]));
-
-    res.json({
-      success: true,
-      users: sanitizedUsers,
-      message: "Users retrieved successfully",
-    });
+    const users = await User.find();
+    res.json({ success: true, users, message: "Users retrieved successfully" });
   } catch (err) {
     res.status(500).json({ success: false, error: "Server error" });
   }
 };
 
-
+export const getUserById = async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.user!.id).select(
+      "_id name email phone"
+    );
+    if (!user)
+      return res.status(404).json({ success: false, error: "User not found" });
+    res.json({ success: true, user, message: "User retrieved successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
 
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {
-    const id = req.user?.id;
-    const user = await UserModel.findById(Number(id));
-    if (!user || user.deleted) {
+    const user = await User.findById(req?.user?.id).select(
+      "name email pin phone balance dva"
+    );
+
+    if (!user) {
       return res.status(404).json({
         success: false,
         error: "User not found",
       });
     }
-    const sanitizedUser = _.pick(user, ["id", "name", "email"]);
+
     res.json({
       success: true,
-      user: sanitizedUser,
+      user,
       message: "User retrieved successfully",
     });
   } catch (err) {
@@ -53,151 +57,141 @@ export const getCurrentUser = async (req: Request, res: Response) => {
   }
 };
 
+// controllers/auth.controller.ts
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, role = "user" } = req.body;
+    let user = await User.findOne({ email: req.body.email });
+    if (user)
+      return res.status(400).json({ success: false, error: "User already registered." });
 
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: "name, email and password are required"
-      });
-    }
+    user = new User(_.pick(req.body, ["name", "email", "password", "phone", "pin"]));
+    user.password = await hashPassword(user.password);
+    user.pin = await hashPassword(user.pin);
+    await user.save();
 
-    const existingUsers = await UserModel.findAll();
-    const existing = existingUsers.find(u => u.email === email);
+    const code = generateVerificationCode();
+    setVerificationCode(user.email, code);
+    await sendVerificationEmail(user.email, String(code));
 
-    if (existing) {
-      return res.status(200).json({
+    const token = signToken({
+      id: user._id,
+      email: user.email,
+      role: user.isAdmin ? "admin" : "user",
+    });
+
+    res.status(201)
+      .header("x-auth-token", token)
+      .json({
         success: true,
-        message: "User already exists (sync safe)",
-        user: existing
+        user: _.pick(user, ["_id", "name", "email", "phone"]),
+        message: "User created successfully. Verification code sent.",
       });
-    }
-
-    const hashedPassword = await hashPassword(password);
-    const user = await UserModel.create({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-      synced: false,
-      deleted: false
-    });
-
-    res.status(201).json({
-      success: true,
-      user
-    });
 
   } catch (err) {
     res.status(400).json({
       success: false,
-      error: err instanceof Error ? err.message : "Invalid data"
+      error: err instanceof Error ? err.message : "Invalid data",
     });
   }
 };
 
 
+
+
+
+// PATCH: Partially update user fields. Supports id from either params or query.
 export const updateUser = async (req: Request, res: Response) => {
   const id = req.params.id || req.query.id;
-
   if (!id) {
-    return res.status(400).json({
-      success: false,
-      error: "Missing user id parameter"
-    });
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing user id parameter" });
   }
-
   try {
-    const user = await UserModel.findById(Number(id));
-
-    if (!user || user.deleted) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found"
-      });
-    }
-
+    // Only validate fields that are present (for PATCH, not all required)
     const allowedFields = [
       "name",
       "email",
       "password",
-      "role"
-      // ❌ DO NOT allow client to manually update deleted/synced
+      "phone",
+      "balance",
+      "pin",
+      "dva",
+      "isAdmin",
+      "isActive",
     ];
-
     const data: Record<string, any> = {};
-
     for (const field of allowedFields) {
       if (field in req.body) {
-        data[field] = req.body[field];
+        if (
+          field === "dva" &&
+          typeof req.body.dva === "object" &&
+          req.body.dva !== null
+        ) {
+          // Only update allowed dva subfields
+          const dvaFields = [
+            "customer_code",
+            "account_number",
+            "account_name",
+            "bankname",
+            "currency",
+          ];
+          data.dva = {};
+          for (const subField of dvaFields) {
+            if (subField in req.body.dva) {
+              data.dva[subField] = req.body.dva[subField];
+            }
+          }
+        } else {
+          data[field] = req.body[field];
+        }
       }
     }
-
-    if (data.password) {
-      data.password = await hashPassword(data.password);
+    // If no updatable fields provided
+    if (Object.keys(data).length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, error: "No valid fields provided for update" });
     }
-
-    // 🔥 Sync-safe updates
-    data.synced = false;
-
-    const updatedUser = await UserModel.update(Number(id), data);
-
+    if (data.password || data.pin) {
+      data.password = await hashPassword(data.password);
+      data.pin = await hashPassword(data.pin);
+    }
+    const updatedUser = await User.findByIdAndUpdate(id, data, {
+      new: true,
+      runValidators: true,
+    }).select("_id name email phone dva isAdmin isActive");
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
     res.json({
       success: true,
-      user: updatedUser
+      user: updatedUser,
+      message: "User updated successfully",
     });
-
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      error: "Server error"
-    });
+    res.status(500).json({ success: false, error: "Server error" });
   }
 };
 
-
 export const deleteUser = async (req: Request, res: Response) => {
+  // Support id from either params or query
   const id = req.params.id || req.query.id;
-
   if (!id) {
-    return res.status(400).json({
-      success: false,
-      error: "Missing user id parameter"
-    });
+    return res
+      .status(400)
+      .json({ success: false, error: "Missing user id parameter" });
   }
-
   try {
-    if (!req.user?.role || req.user.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        error: "Only admins can delete users"
-      });
-    }
-
-    const user = await UserModel.findById(Number(id));
-    if (!user || user.deleted) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found"
-      });
-    }
-
-    await UserModel.update(Number(id), { deleted: true, synced: false });
-
-    res.json({
-      success: true,
-      message: "User marked as deleted successfully"
-    });
-
+    const deletedUser = await User.findByIdAndDelete(id);
+    if (!deletedUser)
+      return res.status(404).json({ success: false, error: "User not found" });
+    res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {
-    console.error(err);
     res.status(500).json({
       success: false,
-      error: err instanceof Error ? err.message : "Server error"
+      error: err instanceof Error ? err.message : "Server error",
     });
   }
 };

@@ -1,54 +1,61 @@
 import express from "express";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 import cors from "cors";
-import swaggerUi from "swagger-ui-express";
-
-import authRoute from "./routes/auth";
+import authRoute from "./routes/auth"; // matches filename exactly
 import userRoutes from "./routes/userRoutes";
-import saleRoutes from "./routes/saleRoutes";
-import productRoutes from "./routes/productRoutes";
-import syncRoutes from "./routes/syncRoutes";
-import { notFound, errorHandler } from "./middleware/errorMiddleware";
+import codeRoutes from "./routes/codeRoutes";
+import transactionRoutes from "./routes/transactionRoutes";
+import webhookRoutes from "./routes/webhookRoutes";
+import chargeRoutes from "./routes/chargeRoutes";
+import smePlugRoutes from "./routes/smePlugRoutes";
+import alrahuzRoutes from "./routes/alrahuz.routes";
+import smePlugWebhookRoutes from "./routes/smePlugWebhookRoutes";
+import providerRoutes from "./routes/provider.routes";
+import utilityRoutes from "./routes/utilityRoutes";
+import examRoutes from "./routes/examRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
+import bankRoutes from "./routes/bankRoutes";
 
-import { PrismaClient } from "@prisma/client"; // ✅ correct import
-import { admin } from "./middleware/admin";
-import { auth } from "./middleware/auth";
-import swaggerRoute from "./routes/swagger";
-import categoryRoutes from "./routes/categoryRoutes";
+import { notFound, errorHandler } from "./middleware/errorMiddleware";
 
 dotenv.config();
 
 const app = express();
+
 app.use(express.json());
 
+// CORS configuration: allow specific frontend origin in production, allow all in development
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:8080";
 const corsOptions = process.env.NODE_ENV === "production"
   ? { origin: FRONTEND_URL, credentials: true }
   : { origin: true, credentials: true };
 app.use(cors(corsOptions));
 
+const isProd = process.env.NODE_ENV === "production";
+const mongoUri = isProd
+  ? process.env.MONGODB_URI_PROD
+  : process.env.MONGODB_URI_DEV;
 
-
-const prisma = new PrismaClient();
-
-async function main() {
-  // Test DB connection
-  await prisma.$connect();
-  console.log("Connected to database");
-}
-
-main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
-
+mongoose
+  .connect(mongoUri as string)
+  .then(() => console.log("MongoDB connected"))
+  .catch((err: any) => console.error("MongoDB connection error:", err));
 
 app.use("/api/auth", authRoute);
-app.use("/api/users", auth, admin, userRoutes);
-app.use("/api/sales", auth, admin, saleRoutes);
-app.use("/api/products", auth, admin, productRoutes);
-app.use("/api/categories", auth, admin, categoryRoutes);
-app.use("/api/sync", syncRoutes);
-app.use("/api/docs", swaggerRoute);
+app.use("/api/users", userRoutes);
+app.use("/api/code", codeRoutes);
+app.use("/api/transactions", transactionRoutes);
+app.use("/api/webhook", webhookRoutes);
+app.use("/api/charges", chargeRoutes);
+app.use("/api/smeplug", smePlugRoutes);
+app.use("/api/alrahuz", alrahuzRoutes);
+app.use("/api/webhook", smePlugWebhookRoutes);
+app.use("/api/admin/providers", providerRoutes); // Example admin route
+app.use("/api/utility", utilityRoutes); // Utility routes to be added here
+app.use("/api/exams", examRoutes);
+app.use("/api/notification", notificationRoutes);
+app.use("/api", bankRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
