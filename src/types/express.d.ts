@@ -7,6 +7,7 @@ export interface AuthUser extends JwtPayload {
   id: string;
   role?: string;
   email?: string;
+  isAdmin?: boolean;
   // Add any other properties your token contains
 }
 

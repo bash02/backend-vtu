@@ -10,17 +10,17 @@ import {
 const router = Router();
 
 // Admin: get all users
-router.get("/", auth, admin, userController.getUsers);
+router.get("/", userController.getUsers);
 
 // User and Admin: get current user
-router.get("/me", auth, userController.getCurrentUser);
+router.get("/me", userController.getCurrentUser);
 
 // All
 router.post("/", validateUserCreate, userController.createUser);
 
 // Support update and delete by query param as well
-router.patch("/", auth, admin, userController.updateUser);
+router.patch("/:id", userController.updateUser);
 
-router.delete("/", auth, admin, userController.deleteUser);
+router.delete("/:id", userController.deleteUser);
 
 export default router;

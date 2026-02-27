@@ -1,5 +1,5 @@
 {
-  "name": "backend-vtu",
+  "name": "pos",
   "module": "index.ts",
   "type": "module",
   "private": true,
@@ -15,12 +15,17 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/lodash": "^4.17.21",
     "@types/nodemailer": "^7.0.4",
-    "@types/pug": "^2.0.10"
+    "@types/pug": "^2.0.10",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@types/yamljs": "^0.2.34",
+    "prisma": "6.5.0"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@prisma/client": "6.5.0",
     "apisauce": "^3.2.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
@@ -32,6 +37,9 @@
     "mongoose": "^9.0.1",
     "nodemailer": "^7.0.11",
     "pug": "^3.0.3",
-    "resend": "^6.7.0"
+    "resend": "^6.7.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
+    "yamljs": "^0.3.0"
   }
 }

@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  name         String
+  email        String       @unique
+  password     String
+  role         String       @default("user")
+  deleted      Boolean      @default(false)
+  synced       Boolean      @default(false)
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+}
+
+model Product {
+  id           Int          @id @default(autoincrement())
+  name         String
+  sku          String       @unique
+  price        Float
+  image        String?
+  category_id  Int?
+  quantity     Int          @default(0)
+  description  String?
+  synced       Boolean      @default(false)
+  deleted      Boolean      @default(false)
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+  category     Category?    @relation(fields: [category_id], references: [id])
+}
+
+model Sale {
+  id             Int      @id @default(autoincrement())
+  items          String
+  total_amount   Float
+  payment_method String   @default("cash")
+  deleted        Boolean  @default(false)
+  synced         Boolean  @default(false)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+}
+
+model Category {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  deleted      Boolean  @default(false)
+  synced       Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  products     Product[]
+}
