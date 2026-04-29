@@ -61,7 +61,11 @@ export const generateDVA = async (req: Request, res: Response) => {
       country: "NG",
     };
 
+    console.log("DVA Payload:", dvaPayload);
+
     const dvaResponse = await assignDedicatedAccount(dvaPayload);
+
+    console.log("DVA Response:", dvaResponse);
 
     if (!dvaResponse.ok) {
       // Clear reserved flag on failure
