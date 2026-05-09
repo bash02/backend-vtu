@@ -392,7 +392,7 @@ export const buyData = async (req: Request, res: Response) => {
       amount: existing.plan,
       fee: 0,
       total: existing.selling_price,
-      status: "pending", // webhook will finalize
+      status: "success", // webhook will finalize
       number: mobile_number,
       response: responseData,
     });

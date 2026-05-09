@@ -253,7 +253,7 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
       amount: existing.plan,
       fee: 0,
       total: existing.selling_price,
-      status: "pending",
+      status: "success",
       number: mobile_number,
       response: responseData,
     });
