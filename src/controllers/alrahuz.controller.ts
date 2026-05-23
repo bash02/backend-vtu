@@ -470,7 +470,7 @@ export const buyAirtime = async (req: Request, res: Response) => {
       reference: responseData.data?.reference || "",
       type: "airtime",
       provider: getNetworkName(network),
-      amount: `${amount}`,
+      amount: `₦${amount}`,
       fee: airtimeDiscountPercentage,
       total: debitAmount,
       status: "pending", // webhook will finalize
@@ -622,7 +622,7 @@ export const buyElectricity = async (req: Request, res: Response) => {
       reference: responseData.data?.reference || "",
       type: "electricity",
       provider: disco_name,
-      amount: `${amount}`,
+      amount: `₦${amount}`,
       fee: chargeAmount,
       total: amount + chargeAmount,
       status: "pending", // webhook will finalize

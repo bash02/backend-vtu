@@ -65,7 +65,7 @@ export const paystackWebhook = async (req: Request, res: Response) => {
             reference: tx.reference,
             type: "wallet",
             provider: "paystack",
-            amount: `${amount}`,
+            amount: `₦${amount}`,
             fee: chargeAmount,
             total: amount - chargeAmount,
             number: accountNumber,
