@@ -94,12 +94,12 @@ export const getDataPlans = async (req: Request, res: Response) => {
   // Unwrap and flatten all plans from all networks into a single array
   // Also, preserve the networkId for each plan by mapping with its parent key
   const allPlans: Array<SmePlugPlan & { networkId: number }> = Object.entries(
-    vendorPlansData
+    vendorPlansData,
   ).flatMap(([networkId, plans]) =>
     (plans as SmePlugPlan[]).map((plan) => ({
       ...plan,
       networkId: Number(networkId),
-    }))
+    })),
   );
 
   // Precompute plan_key and network for each plan to avoid redundancy
@@ -118,30 +118,37 @@ export const getDataPlans = async (req: Request, res: Response) => {
     ? allPlansWithKeys
     : allPlansWithKeys.filter((plan) => ruleMap.has(plan.plan_key));
 
-  const result = filteredPlans.map((plan) => {
-    const rule = ruleMap.get(plan.plan_key);
-    const api =
-      rule && rule.api
-        ? rule.api
-        : Number(plan.telco_price) === 0
-        ? "simhosting"
-        : "smeplug";
-    if (!isAdmin) {
-      const { price, telco_price, dispense_method, network, ...rest } =
-        plan;
+  const result = filteredPlans
+    .map((plan) => {
+      const rule = ruleMap.get(plan.plan_key);
+      const api =
+        rule && rule.api
+          ? rule.api
+          : Number(plan.telco_price) === 0
+            ? "simhosting"
+            : "smeplug";
+      if (!isAdmin) {
+        const { price, telco_price, dispense_method, network, ...rest } = plan;
+        return {
+          ...rest,
+          selling_price: rule?.selling_price ?? null,
+        };
+      }
       return {
-        ...rest,
+        ...plan,
+        api,
+        plan_key: plan.plan_key,
         selling_price: rule?.selling_price ?? null,
+        is_active: rule?.is_active ?? false,
       };
-    }
-    return {
-      ...plan,
-      api,
-      plan_key: plan.plan_key,
-      selling_price: rule?.selling_price ?? null,
-      is_active: rule?.is_active ?? false,
-    };
-  });
+    })
+    .sort((a, b) => {
+      const priceA = a.selling_price ?? Infinity;
+      const priceB = b.selling_price ?? Infinity;
+      return priceA - priceB;
+    });
+
+  res.json({ success: true, data: result });
 
   res.json({ success: true, data: result });
 };
@@ -225,10 +232,8 @@ export const purchaseDataPlan = async (req: Request, res: Response) => {
     const response = await smePlugApi.purchaseDataPlan(
       network,
       mobile_number,
-      plan_id
+      plan_id,
     );
-
-    
 
     const responseData = response.data as DataTransferResponse;
 
@@ -275,7 +280,7 @@ export const vtuTopup = async (req: Request, res: Response) => {
     const response = await smePlugApi.vtuTopup(
       network_id,
       phone_number,
-      amount
+      amount,
     );
     res.json(response.data);
   } catch (error: any) {
