@@ -356,10 +356,10 @@ export const buyData = async (req: Request, res: Response) => {
       });
     }
 
-    console.log(network, mobile_number, plan_id, plan_key);
-
     // Call Alrahuz API
     const response = await alrahuzApi.buyData(network, mobile_number, plan_id);
+
+    console.log("Alrahuz API response:", response.data);
 
     const responseData = response.data as any;
 
