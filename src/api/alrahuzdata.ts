@@ -28,7 +28,8 @@ export const alrahuzApi = {
       plan_id,
       Ported_number,
     });
-    apiClient.post("/data", {
+
+    return apiClient.post("/data", {
       network,
       mobile_number,
       plan: plan_id,
