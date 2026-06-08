@@ -19,14 +19,22 @@ export const alrahuzApi = {
   buyData: (
     network: number,
     mobile_number: string,
-    plan_id: number
-  ) =>
+    plan_id: number,
+    Ported_number = true,
+  ) => {
+    console.log("Buying data with params:", {
+      network,
+      mobile_number,
+      plan_id,
+      Ported_number,
+    });
     apiClient.post("/data", {
       network,
       mobile_number,
       plan: plan_id,
-      Ported_number: true,
-    }),
+      Ported_number,
+    });
+  },
 
   getAllDataTransactions: () => apiClient.get("/data"),
 
@@ -36,7 +44,7 @@ export const alrahuzApi = {
     mobile_number: string,
     amount: number,
     Ported_number = true,
-    airtime_type = "VTU"
+    airtime_type = "VTU",
   ) =>
     apiClient.post("/topup", {
       network,
@@ -57,7 +65,7 @@ export const alrahuzApi = {
     disco_name: string,
     amount: string,
     meter_number: string,
-    MeterType: "prepaid" | "postpaid"
+    MeterType: "prepaid" | "postpaid",
   ) =>
     apiClient.post("/billpayment", {
       disco_name,
@@ -68,7 +76,7 @@ export const alrahuzApi = {
 
   validateMeter: (meternumber: string, disconame: string, mtype: string) =>
     apiClient.get(
-      `/validatemeter/?meternumber=${meternumber}&disconame=${disconame}&mtype=${mtype}`
+      `/validatemeter/?meternumber=${meternumber}&disconame=${disconame}&mtype=${mtype}`,
     ),
 
   // CABLE //
@@ -77,6 +85,6 @@ export const alrahuzApi = {
 
   validateIUC: (smart_card_number: string, cablename: string) =>
     apiClient.get(
-      `/validateiuc?smart_card_number=${smart_card_number}&cablename=${cablename}`
+      `/validateiuc?smart_card_number=${smart_card_number}&cablename=${cablename}`,
     ),
 };
