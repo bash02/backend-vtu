@@ -82,6 +82,7 @@ const networkMap: Record<number, string> = {
 export const getDataPlans = async (req: Request, res: Response) => {
   // Fetch and unwrap the vendor plans response
   const vendorPlansResponse = await smePlugApi.getDataPlans();
+  console.log("Raw vendor plans response:", vendorPlansResponse.data);
   const vendorPlansData = (
     vendorPlansResponse.data as SmePlugDataPlansApiResponse
   ).data;
