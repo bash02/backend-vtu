@@ -151,7 +151,7 @@ function flattenPlans(plans: any): any[] {
 
 export async function processPlanTree(
   plans: any,
-  isAdmin: boolean
+  isAdmin: boolean,
 ): Promise<any[]> {
   const rules = await PlanPrice.find({});
   const ruleMap = new Map(rules.map((r) => [r.plan_key, r]));
@@ -164,7 +164,7 @@ export async function processPlanTree(
     const idKey = plan.dataplan_id || plan.cableplan_id || plan.id;
     return (
       self.findIndex(
-        (p) => (p.dataplan_id || p.cableplan_id || p.id) === idKey
+        (p) => (p.dataplan_id || p.cableplan_id || p.id) === idKey,
       ) === index
     );
   });
@@ -284,20 +284,12 @@ export const upsertPlanPrice = async (req: Request, res: Response) => {
     const month_validate: string = req.body.month_validate;
 
     // Validation: required fields
-    if (
-      !plan_key ||
-      !api ||
-      !selling_price ||
-      !provider ||
-      !plan
-    ) {
+    if (!plan_key || !api || !selling_price || !provider || !plan) {
       return res.status(400).json({
         success: false,
-        error:
-          "Plan key, api, selling price, provider, plan, are required",
+        error: "Plan key, api, selling price, provider, plan, are required",
       });
     }
-
 
     // Upsert logic
     const existing = await PlanPrice.findOne({ plan_key });
@@ -364,16 +356,12 @@ export const buyData = async (req: Request, res: Response) => {
       });
     }
 
+    console.log(network, mobile_number, plan_id, plan_key);
+
     // Call Alrahuz API
-    const response = await alrahuzApi.buyData(
-      network,
-      mobile_number,
-      plan_id,
-    );  
+    const response = await alrahuzApi.buyData(network, mobile_number, plan_id);
 
     const responseData = response.data as any;
-
-    console.log(responseData);
 
     // Debit wallet ONLY if provider succeeded
     if (!responseData.status) {
@@ -452,7 +440,7 @@ export const buyAirtime = async (req: Request, res: Response) => {
     const response = await alrahuzApi.buyAirtime(
       network,
       amount,
-      mobile_number
+      mobile_number,
     );
     const responseData = response.data as any;
 
@@ -601,7 +589,7 @@ export const buyElectricity = async (req: Request, res: Response) => {
       disco_name,
       amount,
       meter_number,
-      MeterType
+      MeterType,
     );
     const responseData = response.data as any;
 
@@ -650,7 +638,7 @@ export const validateMeter = async (req: Request, res: Response) => {
     const response = await alrahuzApi.validateMeter(
       meternumber,
       disconame,
-      mtype
+      mtype,
     );
     res.json(response.data);
   } catch (error: any) {
@@ -697,7 +685,7 @@ export const buyCable = async (req: Request, res: Response) => {
     const response = await alrahuzApi.buyCable(
       cablename,
       cableplan,
-      smart_card_number
+      smart_card_number,
     );
     const responseData = response.data as any;
 
