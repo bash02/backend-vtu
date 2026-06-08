@@ -373,6 +373,8 @@ export const buyData = async (req: Request, res: Response) => {
 
     const responseData = response.data as any;
 
+    console.log(responseData);
+
     // Debit wallet ONLY if provider succeeded
     if (!responseData.status) {
       return res.status(400).json({
