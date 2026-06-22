@@ -39,19 +39,16 @@ function transformNameToColonFormat(name: string) {
   return colonJoined;
 }
 
-
-
 const networkMap: Record<number, string> = {
   1: "MTN",
-  2: "Airtel",
-  3: "Glo",
-  4: "9Mobile",
+  2: "Glo",
+  3: "9Mobile",
+  4: "Airtel",
 };
 
 export const getNetworkName = (id: number | string): string => {
   return networkMap[Number(id)] || "Unknown";
 };
-
 
 const cableMap: Record<number, string> = {
   1: "DSTV",
