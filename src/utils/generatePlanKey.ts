@@ -41,9 +41,9 @@ function transformNameToColonFormat(name: string) {
 
 const networkMap: Record<number, string> = {
   1: "MTN",
-  2: "Glo",
-  3: "9Mobile",
-  4: "Airtel",
+  2: "Airtel",
+  3: "Glo",
+  4: "9Mobile",
 };
 
 export const getNetworkName = (id: number | string): string => {

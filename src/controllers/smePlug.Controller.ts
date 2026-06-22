@@ -73,9 +73,9 @@ export const getNetworks = async (_req: Request, res: Response) => {
 
 const networkMap: Record<number, string> = {
   1: "MTN",
-  2: "Glo",
-  3: "9Mobile",
-  4: "Airtel",
+  2: "Airtel",
+  3: "Glo",
+  4: "9Mobile",
 };
 
 // Admin: Get all data plans with DB price/status
@@ -102,6 +102,7 @@ export const getDataPlans = async (req: Request, res: Response) => {
       networkId: Number(networkId),
     })),
   );
+
 
   // Precompute plan_key and network for each plan to avoid redundancy
   const allPlansWithKeys = allPlans.map((plan) => {
